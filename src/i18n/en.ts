@@ -451,6 +451,11 @@ export const en = {
   'privacy.details': 'Details',
   'privacy.switch': 'Send anonymous statistics',
   'privacy.disabled': 'Statistics are disabled in this build.',
+  'menu.legal': 'Legal',
+  'legal.imprint': 'Imprint / Disclosure',
+  'legal.privacy': 'Privacy policy',
+  'legal.disclaimer': 'Disclaimer',
+  'legal.back': 'Back',
 } as const
 
 export type Key = keyof typeof en

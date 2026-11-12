@@ -135,10 +135,7 @@ test('privacy section in the menu; switching it off stops all requests, also aft
   await expect(
     menu.getByText('no cookies, no personal data, no calc content', { exact: false }),
   ).toBeVisible()
-  await expect(menu.getByRole('link', { name: 'Details' })).toHaveAttribute(
-    'href',
-    'https://github.com/proggler23/ncp-mobile-calc#privacy',
-  )
+  await expect(menu.getByRole('link', { name: 'Details' })).toHaveAttribute('href', '#/datenschutz')
   const sw = menu.getByRole('switch', { name: 'Send anonymous statistics' })
   await expect(sw).toBeChecked()
   await sw.uncheck()

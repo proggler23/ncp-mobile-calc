@@ -20,12 +20,14 @@ import { currentRoute, useRoute } from './state/route'
 import { Segmented } from './ui/controls'
 import { ToastHost } from './ui/Toast'
 import { ShareNotice } from './features/matchup/ShareNotice'
+import { legalPageForRoute } from './legal/route'
 
 // The matchup screen pulls in the bridge, the engine glue and all pickers; keep it out of the
 // first paint. The data tables and NCP scripts load on top of it (see state/lib.ts).
 const loadMatchup = () => import('./features/matchup/MatchupScreen')
 const MatchupScreen = lazy(loadMatchup)
 const TeamsScreen = lazy(() => import('./features/teams/TeamsScreen'))
+const LegalPage = lazy(() => import('./legal/LegalPage'))
 const MenuSheet = lazy(() =>
   import('./features/menu/MenuSheet').then((m) => ({ default: m.MenuSheet })),
 )
@@ -121,6 +123,7 @@ export default function App() {
   const booted = useApp((s) => s.booted)
   const error = useApp((s) => s.error)
   const route = useRoute()
+  const legalPage = legalPageForRoute(route)
   const genNotice = useApp((s) => s.genNotice)
   const storageNotice = useApp((s) => s.storageNotice)
 
@@ -181,7 +184,13 @@ export default function App() {
           </p>
         ) : booted ? (
           <Suspense fallback={<Skeleton />}>
-            {route.startsWith('teams') ? <TeamsScreen /> : <MatchupScreen />}
+            {legalPage ? (
+              <LegalPage page={legalPage} />
+            ) : route.startsWith('teams') ? (
+              <TeamsScreen />
+            ) : (
+              <MatchupScreen />
+            )}
           </Suspense>
         ) : (
           <Skeleton />

@@ -456,4 +456,9 @@ export const de: Dict = {
   'privacy.details': 'Details',
   'privacy.switch': 'Anonyme Statistik senden',
   'privacy.disabled': 'Die Statistik ist in dieser Version deaktiviert.',
+  'menu.legal': 'Rechtliches',
+  'legal.imprint': 'Impressum',
+  'legal.privacy': 'Datenschutz',
+  'legal.disclaimer': 'Haftungsausschluss',
+  'legal.back': 'Zurück',
 }

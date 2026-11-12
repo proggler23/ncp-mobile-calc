@@ -195,14 +195,14 @@ opens the PR; the artifact patch is rejected if it touches paths outside `UPDATE
 
 ## Usage statistics (GoatCounter)
 
-Anonymous, cookieless statistics (`src/analytics/`, events listed in the README "Privacy"
-section). The build only contains them if `VITE_GOATCOUNTER_URL` is set; local builds, forks and
+Anonymous, cookieless statistics (`src/analytics/`, events listed in the privacy policy,
+README "Privacy policy"). The build only contains them if `VITE_GOATCOUNTER_URL` is set; local builds, forks and
 the unit tests have none.
 
 One-time setup:
 
 1. Create a free site at goatcounter.com (site code e.g. `ncpcalc`). GoatCounter counts a
-   visitor with a hash of IP + user agent that rotates daily; no cookies.
+   visit from a session key (site, IP, user agent) kept only in memory for up to 8 hours; no cookies.
 2. GitHub: _Settings → Secrets and variables → Actions → **Variables** → New repository variable_,
    name `GOATCOUNTER_URL`, value `https://<code>.goatcounter.com/count` (a plain variable, not a
    secret: the URL is public in the shipped JavaScript anyway).
@@ -286,3 +286,12 @@ from the patched copy, so intentional patch behaviour is part of the oracle.
 Adding a new ignored (non-engine) upstream script: extend `IGNORED_REFS` in
 `scripts/ncp-sync/config.ts`. Adding a new vendored script: add it to the hash list in UPSTREAM.md
 and to the engine sources (`src/engine/sources`).
+
+## Legal texts
+
+Imprint, privacy policy and disclaimer live in `src/legal/content.ts` (German and English; owner and
+contact in `src/config.ts`; the event list comes from `src/analytics/events.ts`). The in-app pages
+(`#/impressum`, `#/datenschutz`, `#/haftungsausschluss`), the README region between
+`<!-- legal:start -->` and `<!-- legal:end -->` and `docs/PRIVACY.md` are generated from it:
+edit the content, bump `LEGAL_UPDATED`, run `npm run docs:legal` and commit. A unit test fails when
+the generated files are stale.

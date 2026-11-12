@@ -3,7 +3,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { InstallHowTo } from '../features/install/InstallHowTo'
 import { ShareSheet } from '../features/matchup/ShareSheet'
 import { MenuSheet } from '../features/menu/MenuSheet'
-import { PRIVACY_URL } from '../config'
 import { initApp, pickSpecies, setGen, store, updateSet } from '../state/app'
 import { promptInstall, registerInstallListeners, resetInstall } from '../state/install'
 import { getRepository } from '../storage'
@@ -384,9 +383,7 @@ describe('menu privacy section', () => {
       expect(screen.getByRole('heading', { name: title })).toBeInTheDocument()
       expect(screen.getByText(text, { exact: false })).toBeInTheDocument()
       const link = screen.getByRole('link', { name: 'Details' })
-      expect(link).toHaveAttribute('href', PRIVACY_URL)
-      expect(PRIVACY_URL).toBe('https://github.com/proggler23/ncp-mobile-calc#privacy')
-      expect(link).toHaveAttribute('rel', 'noopener noreferrer')
+      expect(link).toHaveAttribute('href', '#/datenschutz')
       const sw = screen.getByRole('switch', { name: label })
       expect(sw).toBeChecked()
       fireEvent.click(sw)
