@@ -193,6 +193,32 @@ opens the PR; the artifact patch is rejected if it touches paths outside `UPDATE
 `AUTO_UPDATE_TOKEN` PAT is only used by this job); deploy = `contents: read`, `pages: write`,
 `id-token: write`. Runs are serialised by the `auto-update` concurrency group.
 
+## Usage statistics (GoatCounter)
+
+Anonymous, cookieless statistics (`src/analytics/`, events listed in the README "Privacy"
+section). The build only contains them if `VITE_GOATCOUNTER_URL` is set; local builds, forks and
+the unit tests have none.
+
+One-time setup:
+
+1. Create a free site at goatcounter.com (site code e.g. `ncpcalc`). GoatCounter counts a
+   visitor with a hash of IP + user agent that rotates daily; no cookies.
+2. GitHub: _Settings → Secrets and variables → Actions → **Variables** → New repository variable_,
+   name `GOATCOUNTER_URL`, value `https://<code>.goatcounter.com/count` (a plain variable, not a
+   secret: the URL is public in the shipped JavaScript anyway).
+3. Re-run the deploy workflow (or push to `main`). The weekly auto-update deploy uses the same
+   variable.
+
+`deploy.yml` passes the variable as `VITE_GOATCOUNTER_URL`; `scripts/goatcounter-url.ts`
+(called from `vite.config.ts`) rejects anything that is not `https://<code>.goatcounter.com[/count]`
+or `https://<host>/count` (self-hosted) and fails the build. To switch statistics off, delete the
+variable and redeploy. Events appear in GoatCounter as pages (`/`) and events (`gen/...`,
+`share/...`, `install/...`); the site's title is only informative. If no hits show up, check the
+site's settings in GoatCounter (it may restrict which domains may send data). E2E tests build
+with a fake endpoint (`https://test.goatcounter.com/count`) and intercept all requests; the window
+flag `__NCP_ANALYTICS_FORCE__` (set by the Playwright fixture) lifts only the "automated browser"
+block, never the opt-out, Do Not Track or Global Privacy Control.
+
 ## German names
 
 - `scripts/build-data/names/de.json`: committed snapshot (kind -> Showdown id of the English name ->

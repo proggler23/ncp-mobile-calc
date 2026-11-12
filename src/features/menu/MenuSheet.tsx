@@ -1,12 +1,14 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { GEN_DATA_IDS } from '../../bridge/gens'
 import { prefetchGen } from '../../bridge/maps'
+import { analyticsEnabled, initAnalytics, setStatsOptOut, useAnalytics } from '../../analytics'
+import { PRIVACY_URL } from '../../config'
 import { markAllDownloaded } from '../../pwa'
 import { getRepository, reloadLibrary, setLang, store } from '../../state/app'
 import { useApp, useT } from '../../state/hooks'
 import { StorageError, errorKey } from '../../state/teams'
 import { Dialog } from '../../ui/Dialog'
-import { Segmented } from '../../ui/controls'
+import { Segmented, Toggle } from '../../ui/controls'
 import { SupportButton } from '../../ui/SupportButton'
 import { InstallHowTo } from '../install/InstallHowTo'
 import { menuInstall, promptInstall, useInstall } from '../../state/install'
@@ -20,7 +22,10 @@ export function MenuSheet({ onClose }: { onClose: () => void }) {
   const lang = useApp((s) => s.lang)
   const fileInput = useRef<HTMLInputElement>(null)
   const install = useInstall(menuInstall)
+  const statsAvailable = analyticsEnabled()
+  const statsOptOut = useAnalytics((s) => s.optOut)
   const [how, setHow] = useState(false)
+  useEffect(() => void initAnalytics(), [])
   const [msg, setMsg] = useState<Msg>()
   const [file, setFile] = useState<{ name: string; text: string }>()
   const [progress, setProgress] = useState<{ done: number; total: number }>()
@@ -196,6 +201,27 @@ export function MenuSheet({ onClose }: { onClose: () => void }) {
               ? t('menu.downloading', { done: progress.done, total: progress.total })
               : t('menu.downloadAll')}
           </button>
+        </section>
+
+        <section className="menu__section" aria-labelledby="menu-privacy">
+          <h3 id="menu-privacy">{t('privacy.title')}</h3>
+          {statsAvailable ? (
+            <>
+              <p className="hint">
+                {t('privacy.text')}{' '}
+                <a href={PRIVACY_URL} target="_blank" rel="noopener noreferrer">
+                  {t('privacy.details')}
+                </a>
+              </p>
+              <Toggle
+                label={t('privacy.switch')}
+                checked={!statsOptOut}
+                onChange={(on) => setStatsOptOut(!on)}
+              />
+            </>
+          ) : (
+            <p className="hint">{t('privacy.disabled')}</p>
+          )}
         </section>
 
         {msg && (

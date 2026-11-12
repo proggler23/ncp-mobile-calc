@@ -67,6 +67,8 @@ export interface Repository {
   }): Promise<CustomSet>
   updateCustomSet(uid: string, patch: Partial<Pick<CustomSet, 'name' | 'set'>>): Promise<CustomSet>
   deleteCustomSet(uid: string): Promise<void>
+  /** Anything stored at all (settings, matchups, teams, sets): false on a brand-new device. */
+  hasAppData(): Promise<boolean>
   getSettings(): Promise<Settings>
   setSettings(patch: Partial<Settings>): Promise<Settings>
   /** Last matchup (both builds + field) of a generation. Not part of the backup file. */
@@ -208,6 +210,14 @@ export function createRepository(backend: Backend): Repository {
       await backend.delete('customSets', uid)
     },
 
+    async hasAppData() {
+      const [settings, teams, custom] = await Promise.all([
+        backend.getAll('settings'),
+        backend.getAll('teams'),
+        backend.getAll('customSets'),
+      ])
+      return settings.length + teams.length + custom.length > 0
+    },
     getSettings: readSettings,
     setSettings: writeSettings,
 
@@ -227,6 +237,7 @@ export function createRepository(backend: Backend): Repository {
       delete exported.menuSeen
       delete exported.installPrompt
       delete exported.layout
+      delete exported.analytics
       const file: BackupFile = {
         app: BACKUP_APP_ID,
         version: backupSchemaVersion,
@@ -317,10 +328,12 @@ export function createRepository(backend: Backend): Repository {
         delete settings.menuSeen
         delete settings.installPrompt
         delete settings.layout
+        delete settings.analytics
         if (local.supportNudge) settings.supportNudge = local.supportNudge
         if (local.menuSeen) settings.menuSeen = local.menuSeen
         if (local.installPrompt) settings.installPrompt = local.installPrompt
         if (local.layout) settings.layout = local.layout
+        if (local.analytics) settings.analytics = local.analytics
         await backend.put('settings', SETTINGS_KEY, settings)
       }
       return {

@@ -198,6 +198,13 @@ let persistQueue: Promise<void> = Promise.resolve()
 
 const LANG_INIT_KEY = 'ncp:lang-init'
 
+/**
+ * This load found no app data at all on the device (decided in `boot`, before anything is
+ * written). Kept in memory only; used for the anonymous `share-open-new` statistic.
+ */
+let freshDevice = false
+export const isFreshDevice = (): boolean => freshDevice
+
 export function initApp(): Promise<void> {
   initPromise ??= boot()
   return initPromise
@@ -217,6 +224,7 @@ async function boot(): Promise<void> {
       known = true
     }
     if (!known) {
+      freshDevice = !(await repo.hasAppData())
       settings = await repo.setSettings({ lang: detectLang() })
     }
   } catch {

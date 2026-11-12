@@ -448,4 +448,10 @@ export const de: Dict = {
   'menu.downloading': 'Lade {done}/{total}…',
   'menu.downloaded': 'Alle Generationen sind offline verfügbar.',
   'menu.downloadFailed': 'Download fehlgeschlagen. Prüfe die Verbindung und versuche es erneut.',
+  'privacy.title': 'Datenschutz',
+  'privacy.text':
+    'Anonyme Nutzungsstatistik über GoatCounter: keine Cookies, keine personenbezogenen Daten, keine Calc-Inhalte.',
+  'privacy.details': 'Details',
+  'privacy.switch': 'Anonyme Statistik senden',
+  'privacy.disabled': 'Die Statistik ist in dieser Version deaktiviert.',
 }

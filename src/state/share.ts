@@ -3,6 +3,7 @@ import { GEN_META } from '../bridge/gens'
 import type { DataGenId, SavedSetLike } from '../bridge/types'
 import { moveLine } from '../features/matchup/ko'
 import type { MoveResult } from '../engine/types'
+import { trackShareOpen } from '../analytics'
 import { translate } from '../i18n'
 import type { Lang } from '../storage/types'
 import type { DecodeFailure, Direction, ShareWarning, SharePayload } from '../share/codec'
@@ -209,6 +210,7 @@ export async function openSharedLink(token: string): Promise<void> {
     }
     setFocusMove(focus)
     setShareNotice({ kind: 'loaded', id: ++noticeId, warnings, undo: before })
+    trackShareOpen()
   } catch {
     fail('data')
   } finally {

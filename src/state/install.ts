@@ -6,6 +6,7 @@
  * first close); dismissals live in the device settings (never in a backup). While the banner has
  * been shown in this session the coffee nudge stays away (see features/matchup/SupportNudge).
  */
+import { track } from '../analytics'
 import { detectPlatform, readEnv, type PlatformEnv, type PlatformKind } from '../install/platform'
 import type { InstallPrompt } from '../storage/types'
 import { getRepository } from './app'
@@ -144,6 +145,7 @@ export async function promptInstall(
     if (outcome === 'accepted') {
       installStore.set({ installed: true })
       void persist()
+      track('install/accepted')
       return 'accepted'
     }
     if (countDismissal) dismissBanner()

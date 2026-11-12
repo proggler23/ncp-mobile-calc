@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { MoveResult } from '../../engine/types'
+import { track, type AnalyticsEvent } from '../../analytics'
 import { copyToClipboard, shareMessage } from '../../share/actions'
 import { useT } from '../../state/hooks'
 import { prepareShare, type MoveRef, type ShareContent } from '../../state/share'
@@ -37,15 +38,21 @@ export function ShareSheet({ row, move, moveName, defenderName, onClose }: Props
     const pending = shareMessage(content)
     onClose()
     void pending.then((outcome) => {
-      if (outcome === 'copied') done(true)
-      else if (outcome === 'failed') done(false)
+      if (outcome === 'shared') track('share/native')
+      else if (outcome === 'copied') {
+        track('share/copy-text') // no Web Share: the whole message was copied instead
+        done(true)
+      } else if (outcome === 'failed') done(false)
     })
   }
-  const copy = (text: string | undefined) => {
+  const copy = (text: string | undefined, event: AnalyticsEvent) => {
     if (text === undefined) return
     const pending = copyToClipboard(text)
     onClose()
-    void pending.then(done)
+    void pending.then((ok) => {
+      if (ok) track(event)
+      done(ok)
+    })
   }
 
   return (
@@ -62,7 +69,7 @@ export function ShareSheet({ row, move, moveName, defenderName, onClose }: Props
           type="button"
           className="btn"
           disabled={!content}
-          onClick={() => copy(content?.full)}
+          onClick={() => copy(content?.full, 'share/copy-text')}
         >
           <span aria-hidden="true">📋</span> {t('share.copyText')}
         </button>
@@ -70,7 +77,7 @@ export function ShareSheet({ row, move, moveName, defenderName, onClose }: Props
           type="button"
           className="btn"
           disabled={!content}
-          onClick={() => copy(content?.url)}
+          onClick={() => copy(content?.url, 'share/copy-link')}
         >
           <span aria-hidden="true">🔗</span> {t('share.copyLink')}
         </button>

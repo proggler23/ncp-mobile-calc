@@ -443,6 +443,12 @@ export const en = {
   'menu.downloading': 'Downloading {done}/{total}…',
   'menu.downloaded': 'All generations are available offline.',
   'menu.downloadFailed': 'Download failed. Check your connection and try again.',
+  'privacy.title': 'Privacy',
+  'privacy.text':
+    'Anonymous usage statistics via GoatCounter: no cookies, no personal data, no calc content.',
+  'privacy.details': 'Details',
+  'privacy.switch': 'Send anonymous statistics',
+  'privacy.disabled': 'Statistics are disabled in this build.',
 } as const
 
 export type Key = keyof typeof en

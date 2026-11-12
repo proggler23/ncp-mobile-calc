@@ -177,6 +177,15 @@ export interface Settings {
   installPrompt?: InstallPrompt
   /** Collapsed panels of the matchup screen. Device-local UI preference, excluded from backups. */
   layout?: LayoutPrefs
+  /** Anonymous usage statistics preferences. Device-local, excluded from backups. */
+  analytics?: AnalyticsPrefs
+}
+
+export interface AnalyticsPrefs {
+  /** The user switched the anonymous statistics off. */
+  optOut?: boolean
+  /** `install/standalone` was already sent from this device. */
+  standaloneSent?: boolean
 }
 
 export interface LayoutPrefs {

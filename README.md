@@ -151,6 +151,13 @@ on every push to `main` (and on manual runs). The deploy build uses only committ
   read/write on this repository) or a GitHub App token that may bypass the protection, and store it
   as the repository secret **`AUTO_UPDATE_TOKEN`**. The update workflow uses it when present.
 
+**Usage statistics (optional).** The build includes anonymous GoatCounter statistics only if the
+repository variable `GOATCOUNTER_URL` is set (for example `https://<code>.goatcounter.com/count`):
+_Settings → Secrets and variables → Actions → Variables → New repository variable_. It is passed
+to the build as `VITE_GOATCOUNTER_URL` and checked at build time (https only; either a
+`*.goatcounter.com` host or a URL ending in `/count`). Unset or empty: no statistics, and the
+menu says so. See [Privacy](#privacy) and [docs/MAINTENANCE.md](docs/MAINTENANCE.md#usage-statistics-goatcounter).
+
 **Base path.** `VITE_BASE` sets the path the app is served from (for example `/repo-name/`). It
 defaults to `/`. The deploy workflow sets it from the repository name. Set it yourself when you
 preview a subpath build locally.
@@ -165,6 +172,38 @@ generations, syncs the NCP upstream if it moved, and runs the validation gates:
 
 Thresholds, rollback, NCP patches and the German-name and curated-set workflows are in
 [docs/MAINTENANCE.md](docs/MAINTENANCE.md).
+
+## Privacy
+
+The app has no accounts, no cookies and no server of its own: teams, sets and calcs stay on your
+device (IndexedDB / localStorage). The only data that leaves it are a few **anonymous usage
+statistics**, counted by [GoatCounter](https://www.goatcounter.com/) (privacy-friendly, cookieless,
+no personal data; see [its privacy policy](https://www.goatcounter.com/privacy)). They are sent
+only by builds that were configured with a GoatCounter endpoint (see
+[Deployment](#deployment)); a fork or local build sends nothing.
+
+**What is sent** (one small request each; GoatCounter also sees what every web request reveals,
+namely your IP address and browser, which it only uses to count a visitor once per day without
+storing either):
+
+| Name                                                                                            | When                                                                              |
+| ----------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| page view of `/` (plus a coarse screen size, and the referring site, without query or fragment) | the app is opened                                                                 |
+| `gen/<generation>/<regulation>`, e.g. `gen/champions/regmc`                                     | at start and when you change generation or regulation, once per value and session |
+| `share/native`, `share/copy-text`, `share/copy-link`                                            | a share or copy action succeeded                                                  |
+| `share-open`                                                                                    | a shared link was opened and applied                                              |
+| `share-open-new`                                                                                | additionally, when the device had no app data before (a new user)                 |
+| `install/accepted`                                                                              | you accepted the browser's install dialog                                         |
+| `install/ios-howto`                                                                             | the iOS install instructions were opened                                          |
+| `install/standalone`                                                                            | the first start as an installed app (once per device)                             |
+
+**What is never sent:** teams, Pokémon, moves, sets, calc inputs or results, the share link or
+anything after the `#` or `?` of the address, names, user IDs or anything that identifies you.
+
+**Opt out** any time in the menu (⋮) under "Privacy" ("Send anonymous statistics"). Nothing is
+sent either when your browser sends Do Not Track or Global Privacy Control, when you are offline
+(nothing is queued for later), or in automated browsers. The choice is stored on the device only
+and is not part of backups.
 
 ## Support
 

@@ -23,6 +23,7 @@ export async function resetAll(settings: { gen: 'sv' | 'champions'; lang?: 'en' 
     menuSeen: undefined,
     installPrompt: undefined,
     layout: undefined,
+    analytics: undefined,
     regulations: undefined,
   })
   resetStore()

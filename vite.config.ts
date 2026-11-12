@@ -4,6 +4,7 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 import { readFileSync } from 'node:fs'
 import { normalizeBase } from './scripts/vite-base.ts'
+import { normalizeGoatCounterUrl } from './scripts/goatcounter-url.ts'
 import { injectSiteUrl, normalizeSiteUrl } from './scripts/site-url.ts'
 
 /** The generation whose data ships in the precache (the current VGC format). */
@@ -20,9 +21,19 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   const base = normalizeBase(env.VITE_BASE || process.env.VITE_BASE)
   const siteUrl = normalizeSiteUrl(env.VITE_SITE_URL || process.env.VITE_SITE_URL, DEFAULT_SITE_URL)
+  // Anonymous usage statistics endpoint (empty = analytics off). Validated here so a typo fails
+  // the build; under Vitest the raw env stays readable so tests can stub it.
+  const goatCounterUrl = normalizeGoatCounterUrl(
+    env.VITE_GOATCOUNTER_URL || process.env.VITE_GOATCOUNTER_URL,
+  )
   return {
     base,
-    define: { __APP_VERSION__: JSON.stringify(pkg.version) },
+    define: {
+      __APP_VERSION__: JSON.stringify(pkg.version),
+      ...(process.env.VITEST
+        ? {}
+        : { 'import.meta.env.VITE_GOATCOUNTER_URL': JSON.stringify(goatCounterUrl) }),
+    },
     build: {
       rolldownOptions: {
         output: {

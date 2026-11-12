@@ -1,3 +1,5 @@
+import { useEffect } from 'react'
+import { track } from '../../analytics'
 import { useT } from '../../state/hooks'
 import { Dialog } from '../../ui/Dialog'
 import './install.css'
@@ -5,6 +7,7 @@ import './install.css'
 /** iOS has no install prompt: the only way is the share sheet. Opened by the user only. */
 export function InstallHowTo({ onClose }: { onClose: () => void }) {
   const t = useT()
+  useEffect(() => track('install/ios-howto'), [])
   return (
     <Dialog title={t('install.howTitle')} onClose={onClose} closeLabel={t('common.close')}>
       <div className="howto">

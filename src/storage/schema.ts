@@ -141,6 +141,10 @@ export const settingsSchema = z.object({
     })
     .optional()
     .catch(undefined),
+  analytics: z
+    .object({ optOut: z.boolean().optional(), standaloneSent: z.boolean().optional() })
+    .optional()
+    .catch(undefined),
 })
 
 /**
