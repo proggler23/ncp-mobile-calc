@@ -41,11 +41,11 @@ jobs:
       status: ${{ steps.gate.outputs.status }}
       changed: ${{ steps.diff.outputs.changed }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.event.repository.default_branch }}
           persist-credentials: false
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 22
           cache: npm
@@ -133,7 +133,7 @@ jobs:
       HAS_PAT: ${{ secrets.AUTO_UPDATE_TOKEN != '' }}
       STATUS: ${{ needs.build-and-check.outputs.status }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.event.repository.default_branch }}
           token: ${{ secrets.AUTO_UPDATE_TOKEN || github.token }}
@@ -176,7 +176,7 @@ jobs:
       # ---- anomaly: open a PR for human review ----
       - name: Open a PR for review
         if: ${{ env.STATUS == 'anomaly' }}
-        uses: peter-evans/create-pull-request@22a9089034f40e5a961c8808d113e2c98fb63676 # v7.0.11
+        uses: peter-evans/create-pull-request@15733dbdfeedb4f7fdb73d13c6f5ac83b710fab8 # v8.1.2
         with:
           token: ${{ secrets.AUTO_UPDATE_TOKEN || github.token }}
           branch: auto-update/data
