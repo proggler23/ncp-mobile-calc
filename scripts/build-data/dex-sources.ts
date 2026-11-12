@@ -1,9 +1,6 @@
 import { createRequire } from 'node:module'
 import path from 'node:path'
-import { Dex as PkmnDex } from '@pkmn/dex'
-import { Generations } from '@pkmn/data'
 import type { GenConfig } from './config'
-import { CACHE_DIR } from './fetch'
 import { nameKey } from './names'
 
 /** Language-free intermediate entity data. */
@@ -52,12 +49,13 @@ export interface RawGen {
   }
 }
 
-// Minimal structural types for the parts of the Dex API we use (shared by @pkmn/dex and Showdown).
+// Minimal structural types for the parts of the Dex API we use (Showdown Dex API).
 interface DexEntity {
   id: string
   name: string
   exists: boolean
   isNonstandard?: string | null
+  gen?: number
 }
 interface DexSpecies extends DexEntity {
   num: number
@@ -72,18 +70,27 @@ interface DexSpecies extends DexEntity {
   isMega?: boolean
   isCosmeticForme?: boolean
   changesFrom?: string
+  battleOnly?: string | string[]
 }
 interface DexMove extends DexEntity {
   type: string
   category: 'Physical' | 'Special' | 'Status'
   basePower: number
+  /** true for generic Max moves, the species name for G-Max signature moves */
+  isMax?: boolean | string
 }
 interface DexLike {
-  species: { get(n: string): DexSpecies }
-  moves: { get(n: string): DexMove }
-  items: { get(n: string): DexEntity }
-  abilities: { get(n: string): DexEntity }
+  species: {
+    get(n: string): DexSpecies
+    all(): DexSpecies[]
+    getLearnsetData(id: string): { exists?: boolean; learnset?: Record<string, string[]> }
+  }
+  moves: { get(n: string): DexMove; all(): DexMove[] }
+  items: { get(n: string): DexEntity; all(): DexEntity[] }
+  abilities: { get(n: string): DexEntity; all(): DexEntity[] }
 }
+
+const toID = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, '')
 
 function toRawSpecies(s: DexSpecies, dex: DexLike): RawSpecies {
   const isForme = s.baseSpecies && s.baseSpecies !== s.name
@@ -145,45 +152,175 @@ function resolvers(dex: DexLike): RawGen['resolve'] {
 
 const byId = <T extends { id: string }>(a: T, b: T) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)
 
-// ---------------------------------------------------------------- @pkmn path
+// ------------------------------------------------------- mainline generations (Dex.forGen)
 
-async function loadPkmn(cfg: GenConfig & { source: { kind: 'pkmn' } }): Promise<RawGen> {
-  const gens = new Generations(PkmnDex)
-  const gen = gens.get(cfg.source.gen)
-  const dex = gen.dex as unknown as DexLike
-  const species: RawSpecies[] = []
-  for (const s of gen.species) {
-    if ((s as unknown as DexSpecies).isCosmeticForme) continue
-    species.push(toRawSpecies(s as unknown as DexSpecies, dex))
+// Existence rules for the mainline generations, (same rules the previous @pkmn/data layer applied):
+// the entity exists in the gen's data, is not flagged non-standard, and is not Illegal/Unreleased.
+function genExists(d: DexEntity & { tier?: string }): boolean {
+  if (!d.exists) return false
+  if (d.isNonstandard) return false
+  return !(d.tier && ['Illegal', 'Unreleased'].includes(d.tier))
+}
+
+const GEN3_HMS = new Set([
+  'cut',
+  'fly',
+  'surf',
+  'strength',
+  'flash',
+  'rocksmash',
+  'waterfall',
+  'dive',
+])
+const GEN4_HMS = new Set(['cut', 'fly', 'surf', 'strength', 'rocksmash', 'waterfall', 'rockclimb'])
+
+/** Is a move with these learnset sources available in generation `genNum`? */
+export function isLearnLegal(moveId: string, sources: string[] | undefined, genNum: number) {
+  if (!sources) return false
+  const gens = sources.map((x) => Number(x[0]))
+  const minGen = Math.min(...gens)
+  if (genNum >= 3 && minGen <= 4 && (GEN3_HMS.has(moveId) || GEN4_HMS.has(moveId))) {
+    let legalGens = ''
+    let available = false
+    if (minGen === 3) {
+      legalGens += '3'
+      available = true
+    }
+    if (available) available = !GEN3_HMS.has(moveId)
+    if (available || gens.includes(4)) {
+      legalGens += '4'
+      available = true
+    }
+    if (available) available = !GEN4_HMS.has(moveId)
+    const minUpperGen = available ? 5 : Math.min(...gens.filter((g) => g > 4))
+    legalGens += '0123456789'.slice(minUpperGen)
+    return legalGens.includes(`${genNum}`)
   }
-  const moves: RawMove[] = []
-  for (const m of gen.moves) {
-    moves.push({
-      id: m.id,
-      name: m.name,
-      type: m.type,
-      category: m.category,
-      bp: m.basePower,
-    })
-  }
-  const items: RawNamed[] = []
-  for (const i of gen.items) items.push({ id: i.id, name: i.name })
-  const abilities: RawNamed[] = []
-  for (const a of gen.abilities) abilities.push({ id: a.id, name: a.name })
+  return '0123456789'.slice(minGen).includes(`${genNum}`)
+}
+
+function loadGenSource(cfg: GenConfig & { source: { kind: 'gen' } }): RawGen {
+  const genNum = cfg.source.gen
+  const dex = loadPsDex().forGen(genNum)
+  const exists = (e: DexEntity) => genExists(e)
+  const speciesAll = dex.species.all().filter((s) => exists(s) && !s.isCosmeticForme)
+  const speciesExists = (n: string) => !!n && exists(dex.species.get(n))
+  const species: RawSpecies[] = speciesAll.map((s) => {
+    // Gen-specific view of the species (abilities by generation, evolutions restricted to
+    // species that exist in this gen).
+    const a: Record<string, string> = {}
+    if (genNum >= 3) {
+      if (s.abilities['0']) a['0'] = s.abilities['0']
+      const a1 = s.abilities['1']
+      if (a1 && (dex.abilities.get(a1).gen ?? 0) <= genNum) a['1'] = a1
+      if (genNum >= 5 && s.abilities['H']) a['H'] = s.abilities['H']
+      if (genNum >= 7 && s.abilities['S']) a['S'] = s.abilities['S']
+    }
+    return toRawSpecies(
+      {
+        ...s,
+        abilities: a,
+        evos: (s.evos ?? []).filter(speciesExists),
+        prevo: s.prevo && speciesExists(s.prevo) ? s.prevo : '',
+      },
+      dex,
+    )
+  })
+  const moves: RawMove[] = dex.moves
+    .all()
+    // G-Max signature moves are not selectable moves (the previous @pkmn/data layer flagged
+    // them 'Gmax'; current Showdown data leaves them standard in gen 8)
+    .filter((m) => exists(m) && typeof m.isMax !== 'string')
+    .map((m) => ({ id: m.id, name: m.name, type: m.type, category: m.category, bp: m.basePower }))
+  const items: RawNamed[] = dex.items
+    .all()
+    .filter(exists)
+    .map((i) => ({ id: i.id, name: i.name }))
+  const abilities: RawNamed[] = dex.abilities
+    .all()
+    .filter((a) => exists(a) && a.id !== 'noability')
+    .map((a) => ({ id: a.id, name: a.name }))
 
   const moveIds = new Set(moves.map((m) => m.id))
-  const learnsets: Record<string, string[]> = {}
-  if (cfg.source.gen >= 1) {
-    for (const s of species) {
-      const learnable = await gen.learnsets.learnable(s.id)
-      if (!learnable) continue
-      const ids = Object.keys(learnable).filter((m) => moveIds.has(m))
-      if (ids.length) learnsets[s.id] = ids.sort()
+  const speciesById = new Map(speciesAll.map((s) => [s.id, s]))
+  /** Learnset walk: species (or its battle-only/changesFrom base) then prevolutions. */
+  const learnable = (start: DexSpecies): Record<string, string[]> => {
+    const out: Record<string, string[]> = {}
+    let sp: DexSpecies | undefined = start
+    let id = sp.id
+    let ld = dex.species.getLearnsetData(id)
+    // entries without a learnset (cosmetic/battle formes) fall through to the battle-only /
+    // base species
+    if (!ld.exists || !ld.learnset) {
+      const candidates = [
+        typeof sp.battleOnly === 'string' && sp.battleOnly !== sp.baseSpecies
+          ? toID(sp.battleOnly)
+          : '',
+        toID(sp.baseSpecies),
+      ].filter(Boolean)
+      for (const c of candidates) {
+        const cand = dex.species.getLearnsetData(c)
+        if (cand.exists && cand.learnset) {
+          id = c
+          ld = cand
+          break
+        }
+      }
     }
+    // The same learnset may be visited twice for formes (harmless: sources are de-duplicated).
+    for (let hops = 0; ld.exists && ld.learnset && hops < 12; hops++) {
+      for (const [mv, sources] of Object.entries(ld.learnset ?? {})) {
+        if (!moveIds.has(mv) || !isLearnLegal(mv, sources, genNum)) continue
+        const filtered = sources.filter((x) => +x.charAt(0) <= genNum)
+        if (!filtered.length) continue
+        const prev = out[mv]
+        if (prev) {
+          for (const src of filtered) {
+            const prefix = src.slice(0, 2)
+            if (!prev.some((x) => x.startsWith(prefix))) prev.push(src)
+          }
+        } else out[mv] = filtered
+      }
+      if (id === 'lycanrocdusk' || (sp.id === 'rockruff' && id === 'rockruff')) id = 'rockruffdusk'
+      else if (sp.id === 'gastrodoneast') id = 'gastrodon'
+      else if (sp.id === 'pumpkaboosuper') id = 'pumpkaboo'
+      else id = toID(String(sp.battleOnly || sp.changesFrom || sp.prevo || ''))
+      if (!id) break
+      const next = speciesById.get(id)
+      if (!next) break
+      sp = next
+      ld = dex.species.getLearnsetData(id)
+    }
+    return out
   }
+  const learnsets: Record<string, string[]> = {}
+  for (const s of species) {
+    const ids = Object.keys(learnable(speciesById.get(s.id)!))
+    if (ids.length) learnsets[s.id] = ids.sort()
+  }
+  return finish(
+    `pokemon-showdown Dex.forGen(${genNum})`,
+    dex,
+    species,
+    moves,
+    items,
+    abilities,
+    learnsets,
+  )
+}
+
+function finish(
+  source: string,
+  dex: DexLike,
+  species: RawSpecies[],
+  moves: RawMove[],
+  items: RawNamed[],
+  abilities: RawNamed[],
+  learnsets: Record<string, string[]>,
+): RawGen {
   const sets = {
     species: new Set(species.map((s) => s.id)),
-    moves: moveIds,
+    moves: new Set(moves.map((m) => m.id)),
     items: new Set(items.map((i) => i.id)),
     abilities: new Set(abilities.map((a) => a.id)),
   }
@@ -195,7 +332,7 @@ async function loadPkmn(cfg: GenConfig & { source: { kind: 'pkmn' } }): Promise<
       return id && sets[k].has(id) ? id : undefined
     }
   return {
-    source: `@pkmn/dex + @pkmn/data Generations gen${cfg.source.gen}`,
+    source,
     species: species.sort(byId),
     moves: moves.sort(byId),
     items: items.sort(byId),
@@ -212,27 +349,20 @@ async function loadPkmn(cfg: GenConfig & { source: { kind: 'pkmn' } }): Promise<
 
 // --------------------------------------------------- Showdown data-mod path
 
-interface PsDex extends DexLike {
-  species: DexLike['species'] & {
-    all(): DexSpecies[]
-    getLearnsetData(id: string): { learnset?: Record<string, string[]> }
-  }
-  moves: DexLike['moves'] & { all(): DexMove[] }
-  items: DexLike['items'] & { all(): DexEntity[] }
-  abilities: DexLike['abilities'] & { all(): DexEntity[] }
+interface PsDexModule {
+  Dex: { mod(id: string): DexLike; forGen(gen: number): DexLike }
 }
-
-let psDexModule: { Dex: { mod(id: string): PsDex } } | undefined
+let psDexModule: PsDexModule | undefined
 function loadPsDex() {
   if (!psDexModule) {
-    // pokemon-showdown is installed into the (untrusted-data-only) cache dir by install-ps.ts
-    const req = createRequire(path.join(CACHE_DIR, 'ps', 'package.json'))
-    psDexModule = req('pokemon-showdown') as typeof psDexModule
+    // Official `pokemon-showdown` package, pinned (exact version) in package.json devDependencies.
+    const req = createRequire(path.resolve(import.meta.dirname, '../../package.json'))
+    psDexModule = req('pokemon-showdown') as PsDexModule
   }
-  return psDexModule!.Dex
+  return psDexModule.Dex
 }
 
-async function loadPsMod(cfg: GenConfig & { source: { kind: 'ps' } }): Promise<RawGen> {
+function loadPsMod(cfg: GenConfig & { source: { kind: 'ps' } }): RawGen {
   const { mod, learnGen } = cfg.source
   const dex = loadPsDex().mod(mod)
   const legal = (e: DexEntity) => e.exists && !e.isNonstandard
@@ -303,38 +433,20 @@ async function loadPsMod(cfg: GenConfig & { source: { kind: 'ps' } }): Promise<R
     .filter(legal)
     .map((i) => ({ id: i.id, name: i.name }))
 
-  const sets = {
-    species: speciesIds,
-    moves: moveIds,
-    items: new Set(items.map((i) => i.id)),
-    abilities: new Set(abilities.map((a) => a.id)),
-  }
-  const r = resolvers(dex)
-  const guard =
-    (k: keyof typeof sets) =>
-    (n: string): string | undefined => {
-      const id = r[k](n)
-      return id && sets[k].has(id) ? id : undefined
-    }
-  return {
-    source: `pokemon-showdown npm mod "${mod}"`,
-    species: species.sort(byId),
-    moves: moves.sort(byId),
-    items: items.sort(byId),
-    abilities: abilities.sort(byId),
+  return finish(
+    `pokemon-showdown npm mod "${mod}"`,
+    dex,
+    species,
+    moves,
+    items,
+    abilities,
     learnsets,
-    resolve: {
-      species: guard('species'),
-      moves: guard('moves'),
-      items: guard('items'),
-      abilities: guard('abilities'),
-    },
-  }
+  )
 }
 
 export async function loadRawGen(cfg: GenConfig): Promise<RawGen> {
-  if (cfg.source.kind === 'pkmn') {
-    return loadPkmn(cfg as GenConfig & { source: { kind: 'pkmn' } })
+  if (cfg.source.kind === 'gen') {
+    return loadGenSource(cfg as GenConfig & { source: { kind: 'gen' } })
   }
   return loadPsMod(cfg as GenConfig & { source: { kind: 'ps' } })
 }

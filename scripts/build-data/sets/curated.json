@@ -1,0 +1,4 @@
+{
+  "$comment": "Hand-curated common sets, merged over the generated Smogon-usage sets at build time (scripts/build-data/sets-merge.ts). Schema: gens.<genId>.<speciesId> = { mode?: 'replace' (default) | 'prepend' | 'append', sets: [{ ability, item, nature, evs?: {hp,atk,def,spa,spd,spe}, moves: [1-4 move ids], teraType? }] }. All ids are Showdown ids (lowercase alphanumerics) as in src/data/generated/<gen>/dex.json. Entries only take effect when that gen is built (active gens, --gen <id> or --all). See docs/MAINTENANCE.md.",
+  "gens": {}
+}

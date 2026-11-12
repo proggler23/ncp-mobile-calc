@@ -1,7 +1,8 @@
 import type { GenId } from '../../src/data/types'
 
-export interface PkmnSource {
-  kind: 'pkmn'
+/** Showdown `Dex.forGen(n)` (the mainline generation data, learnsets restricted to gen n) */
+export interface GenSource {
+  kind: 'gen'
   gen: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
 }
 export interface PsModSource {
@@ -22,11 +23,39 @@ export interface VgcFormat {
 export interface GenConfig {
   id: GenId
   label: string
-  source: PkmnSource | PsModSource
+  source: GenSource | PsModSource
   /** In priority order. First format that has a species supplies that species' sets. */
   vgc: VgcFormat[]
   gaps: string[]
   statPoints?: boolean
+}
+
+/**
+ * Generations that `npm run build:data` regenerates by default (and that the scheduled refresh
+ * touches). Every other generation is a FROZEN, committed snapshot: its files under
+ * src/data/generated/<gen>/ are never rewritten unless you pass `--all` or `--gen <id>`.
+ *
+ * Freeze a finished format by removing it from this list; thaw a new one by adding it.
+ * Optional entries (kept out by default because their games/formats are finished):
+ *   'sv'  - Scarlet/Violet / VGC regulations; add it while a Reg is still being played.
+ *   'za'  - Legends Z-A; add it if Showdown's `gen9legends` mod is still changing.
+ * See docs/MAINTENANCE.md ("Adding a format / generation").
+ */
+export const ACTIVE_FORMATS: GenId[] = ['champions']
+
+/** Resolve CLI flags to the list of generations to (re)build. */
+export function selectGens(argv: string[], all: GenConfig[] = GENS): GenConfig[] {
+  const known = new Set(all.map((g) => g.id as string))
+  const i = argv.indexOf('--gen')
+  if (argv.includes('--all')) return all
+  if (i >= 0) {
+    const ids = (argv[i + 1] ?? '').split(',').filter(Boolean)
+    const bad = ids.filter((id) => !known.has(id))
+    if (!ids.length || bad.length)
+      throw new Error(`--gen: unknown generation(s) ${bad.join(', ') || '(none given)'}`)
+    return all.filter((g) => ids.includes(g.id))
+  }
+  return all.filter((g) => ACTIVE_FORMATS.includes(g.id))
 }
 
 const NO_VGC = 'No VGC usage statistics exist on smogon.com/stats for this generation.'
@@ -35,28 +64,28 @@ export const GENS: GenConfig[] = [
   {
     id: 'rby',
     label: 'Gen 1 (RBY)',
-    source: { kind: 'pkmn', gen: 1 },
+    source: { kind: 'gen', gen: 1 },
     vgc: [],
     gaps: [NO_VGC, 'No Doubles/VGC format existed; sets are empty.'],
   },
   {
     id: 'gsc',
     label: 'Gen 2 (GSC)',
-    source: { kind: 'pkmn', gen: 2 },
+    source: { kind: 'gen', gen: 2 },
     vgc: [],
     gaps: [NO_VGC],
   },
   {
     id: 'adv',
     label: 'Gen 3 (RSE/FRLG)',
-    source: { kind: 'pkmn', gen: 3 },
+    source: { kind: 'gen', gen: 3 },
     vgc: [],
     gaps: [NO_VGC],
   },
   {
     id: 'dpp',
     label: 'Gen 4 (DPP/HGSS)',
-    source: { kind: 'pkmn', gen: 4 },
+    source: { kind: 'gen', gen: 4 },
     vgc: [
       { id: 'gen4vgc2010', months: ['2026-07', '2026-06'] },
       { id: 'gen4vgc2009', months: ['2026-05', '2026-04', '2026-03'] },
@@ -68,7 +97,7 @@ export const GENS: GenConfig[] = [
   {
     id: 'bw',
     label: 'Gen 5 (BW/B2W2)',
-    source: { kind: 'pkmn', gen: 5 },
+    source: { kind: 'gen', gen: 5 },
     vgc: [
       { id: 'gen5vgc2013', months: ['2025-11', '2025-10', '2025-05', '2025-02', '2025-01'] },
       { id: 'gen5vgc2011', months: ['2025-05', '2025-04'] },
@@ -78,7 +107,7 @@ export const GENS: GenConfig[] = [
   {
     id: 'xy',
     label: 'Gen 6 (XY/ORAS)',
-    source: { kind: 'pkmn', gen: 6 },
+    source: { kind: 'gen', gen: 6 },
     vgc: [
       { id: 'vgc2016', months: ['2016-04', '2016-03', '2016-05', '2016-06'] },
       { id: 'vgc2015', months: ['2015-04', '2015-05', '2015-06', '2015-03'] },
@@ -91,7 +120,7 @@ export const GENS: GenConfig[] = [
   {
     id: 'sm',
     label: 'Gen 7 (SM/USUM)',
-    source: { kind: 'pkmn', gen: 7 },
+    source: { kind: 'gen', gen: 7 },
     vgc: [
       { id: 'gen7vgc2019ultraseries', months: ['2019-03', '2019-02', '2019-04', '2019-05'] },
       { id: 'gen7vgc2018', months: ['2018-04', '2018-03', '2018-05'] },
@@ -113,7 +142,7 @@ export const GENS: GenConfig[] = [
   {
     id: 'swsh',
     label: 'Gen 8 (Sw/Sh)',
-    source: { kind: 'pkmn', gen: 8 },
+    source: { kind: 'gen', gen: 8 },
     vgc: [
       { id: 'gen8vgc2022', months: ['2022-05', '2022-04', '2022-06', '2022-03'] },
       { id: 'gen8vgc2021series11', months: ['2021-12', '2021-11', '2022-01'] },
@@ -124,7 +153,7 @@ export const GENS: GenConfig[] = [
   {
     id: 'sv',
     label: 'Gen 9 (Scarlet/Violet)',
-    source: { kind: 'pkmn', gen: 9 },
+    source: { kind: 'gen', gen: 9 },
     vgc: [
       { id: 'gen9vgc2026regi', months: ['2026-05', '2026-04', '2026-03'] },
       { id: 'gen9vgc2026regf', months: ['2026-03', '2026-02', '2026-01'] },
@@ -144,7 +173,7 @@ export const GENS: GenConfig[] = [
     gaps: [
       NO_VGC + ' (Legends Z-A has no competitive ladder format.)',
       "Species list comes from the pokemon-showdown 'gen9legends' mod (isNonstandard filter). The mod inherits moves, items and abilities from gen9 (SV) and its learnsets still carry SV-era sources, so Z-A-specific movepools, new moves, Mega Stones and Z-A balance changes are NOT reflected.",
-      'TODO: replace with real Z-A data when Showdown/@pkmn ship it.',
+      'TODO: replace with real Z-A data when Showdown ships it.',
     ],
   },
   {

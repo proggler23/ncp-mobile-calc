@@ -1,25 +1,24 @@
 {
   "generatedBy": "scripts/build-data (npm run build:data)",
   "packages": {
-    "@pkmn/dex": "0.11.0",
-    "@pkmn/data": "0.11.0",
     "pokemon-showdown": "0.11.11",
-    "requested": "latest"
+    "pinned": "0.11.11"
   },
   "germanNames": {
-    "source": "PokeAPI/pokeapi data/v2/csv (pokemon_species_names, move_names, ability_names, item_names)",
+    "source": "PokeAPI/pokeapi data/v2/csv (pokemon_species_names, move_names, ability_names, item_names), committed snapshot scripts/build-data/names/de.json + overrides.de.json",
+    "snapshotDate": "2026-11-12",
     "url": "https://github.com/PokeAPI/pokeapi/tree/master/data/v2/csv",
     "license": "PokeAPI data: BSD-3-Clause",
     "note": "Names are Nintendo/Game Freak property; used only as display labels."
   },
   "usageStats": {
     "source": "Smogon usage statistics (chaos JSON): https://www.smogon.com/stats/",
-    "note": "Only aggregated usage numbers are used (spreads, items, abilities, moves, tera). No Smogon prose or analysis text is stored."
+    "note": "Only aggregated usage numbers are used (spreads, items, abilities, moves, tera). No Smogon prose or analysis text is stored. Optional: on fetch failure the last committed sets are kept (gens.<gen>.usageFallback)."
   },
-  "entityData": "Pokemon Showdown data (MIT) via @pkmn/dex and the pokemon-showdown npm package",
+  "entityData": "Pokemon Showdown data (MIT) via the pinned official pokemon-showdown npm package",
   "gens": {
     "rby": {
-      "entitySource": "@pkmn/dex + @pkmn/data Generations gen1",
+      "entitySource": "pokemon-showdown Dex.forGen(1)",
       "vgcFormats": [],
       "gaps": [
         "No VGC usage statistics exist on smogon.com/stats for this generation.",
@@ -27,21 +26,21 @@
       ]
     },
     "gsc": {
-      "entitySource": "@pkmn/dex + @pkmn/data Generations gen2",
+      "entitySource": "pokemon-showdown Dex.forGen(2)",
       "vgcFormats": [],
       "gaps": [
         "No VGC usage statistics exist on smogon.com/stats for this generation."
       ]
     },
     "adv": {
-      "entitySource": "@pkmn/dex + @pkmn/data Generations gen3",
+      "entitySource": "pokemon-showdown Dex.forGen(3)",
       "vgcFormats": [],
       "gaps": [
         "No VGC usage statistics exist on smogon.com/stats for this generation."
       ]
     },
     "dpp": {
-      "entitySource": "@pkmn/dex + @pkmn/data Generations gen4",
+      "entitySource": "pokemon-showdown Dex.forGen(4)",
       "vgcFormats": [
         {
           "format": "gen4vgc2010",
@@ -63,7 +62,7 @@
       ]
     },
     "bw": {
-      "entitySource": "@pkmn/dex + @pkmn/data Generations gen5",
+      "entitySource": "pokemon-showdown Dex.forGen(5)",
       "vgcFormats": [
         {
           "format": "gen5vgc2013",
@@ -85,7 +84,7 @@
       ]
     },
     "xy": {
-      "entitySource": "@pkmn/dex + @pkmn/data Generations gen6",
+      "entitySource": "pokemon-showdown Dex.forGen(6)",
       "vgcFormats": [
         {
           "format": "vgc2016",
@@ -114,7 +113,7 @@
       ]
     },
     "sm": {
-      "entitySource": "@pkmn/dex + @pkmn/data Generations gen7",
+      "entitySource": "pokemon-showdown Dex.forGen(7)",
       "vgcFormats": [
         {
           "format": "gen7vgc2019ultraseries",
@@ -152,7 +151,7 @@
       ]
     },
     "swsh": {
-      "entitySource": "@pkmn/dex + @pkmn/data Generations gen8",
+      "entitySource": "pokemon-showdown Dex.forGen(8)",
       "vgcFormats": [
         {
           "format": "gen8vgc2022",
@@ -179,7 +178,7 @@
       "gaps": []
     },
     "sv": {
-      "entitySource": "@pkmn/dex + @pkmn/data Generations gen9",
+      "entitySource": "pokemon-showdown Dex.forGen(9)",
       "vgcFormats": [
         {
           "format": "gen9vgc2026regi",
@@ -227,7 +226,7 @@
       "gaps": [
         "No VGC usage statistics exist on smogon.com/stats for this generation. (Legends Z-A has no competitive ladder format.)",
         "Species list comes from the pokemon-showdown 'gen9legends' mod (isNonstandard filter). The mod inherits moves, items and abilities from gen9 (SV) and its learnsets still carry SV-era sources, so Z-A-specific movepools, new moves, Mega Stones and Z-A balance changes are NOT reflected.",
-        "TODO: replace with real Z-A data when Showdown/@pkmn ship it."
+        "TODO: replace with real Z-A data when Showdown ships it."
       ]
     },
     "champions": {
