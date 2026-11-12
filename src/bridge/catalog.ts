@@ -1,5 +1,5 @@
 /** Picker / display helpers on top of the bridge maps and Showdown data. */
-import type { Lang } from '../data/types'
+import type { Lang, SpeciesRecord } from '../data/types'
 import { normalizeSearch } from '../data'
 import { entityNames, getBridge, isNatDexOnly, isNcpOnly, isPrimary, type Bridge } from './maps'
 import type { DataGenId, EntityKind } from './types'
@@ -16,6 +16,11 @@ export function displayName(gen: DataGenId, kind: EntityKind, id: string, lang: 
 
 export function speciesDisplayName(gen: DataGenId, id: string, lang: Lang): string {
   return displayName(gen, 'species', id, lang)
+}
+
+/** Showdown species record (base/forme info) of a species id, if known. */
+export function speciesRecord(gen: DataGenId, id: string): SpeciesRecord | undefined {
+  return getBridge(gen).records.species.get(id) as SpeciesRecord | undefined
 }
 
 export interface EngineSpecies {

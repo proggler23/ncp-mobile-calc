@@ -23,6 +23,7 @@ export {
 } from './convert'
 export {
   speciesDisplayName,
+  speciesRecord,
   displayName,
   engineSpeciesList,
   movesForSpecies,

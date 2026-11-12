@@ -47,6 +47,11 @@
   white-space: nowrap;
 }
 
+.chips-row__members .chip {
+  /* lifts the label so the forme badge below it never touches descenders */
+  padding-bottom: 7px;
+}
+
 .chips-row .chip--switcher {
   flex: none;
   width: var(--tap);
@@ -72,10 +77,20 @@
 
 .chip__warn {
   position: absolute;
-  top: 0;
-  right: 1px;
+  top: 4px;
+  right: 9px;
   font-size: 0.6875rem;
   line-height: 1;
+}
+
+.chip__forme {
+  position: absolute;
+  bottom: 5px;
+  right: 9px;
+  font-size: 0.5625rem;
+  font-weight: 700;
+  line-height: 1;
+  opacity: 0.85;
 }
 
 .pair {

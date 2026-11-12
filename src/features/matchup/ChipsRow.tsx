@@ -7,6 +7,7 @@ import { buildProblemsOf, regulationName } from '../../state/regulation'
 import { switchActiveTeam } from '../../state/teams'
 import { NavLink } from '../../ui/NavLink'
 import '../regulation/legal.css'
+import { chipLabels } from './chipLabels'
 
 function TeamSwitcher({ onDone }: { onDone: () => void }) {
   const t = useT()
@@ -45,12 +46,6 @@ function TeamSwitcher({ onDone }: { onDone: () => void }) {
       </NavLink>
     </div>
   )
-}
-
-/** Chip text: the first letters of the (localized) species name; the full name is the label. */
-export const CHIP_CHARS = 4
-export function chipLabel(name: string): string {
-  return Array.from(name).slice(0, CHIP_CHARS).join('')
 }
 
 /** Compact ▾ button that opens the team switcher (select + "Manage teams") below the chips. */
@@ -121,6 +116,7 @@ export function ChipsRow() {
     body = <span className="muted chips-row__note">{t('teams.noMembers')}</span>
   } else {
     const { bridge } = getLib()
+    const shown = chipLabels(team.members, lang, (id) => bridge.speciesRecord(gen, id))
     body = (
       <div
         className="chips-row__members"
@@ -129,6 +125,7 @@ export function ChipsRow() {
       >
         {team.members.map((m, i) => {
           const full = bridge.speciesDisplayName(gen, m.speciesId, lang)
+          const { label: text, badge } = shown[i]!
           const illegal = !!buildProblemsOf(gen, regulation, m)
           const warn = t('reg.notLegal', { reg: regulationName(gen, regulation, lang) })
           const label = illegal ? `${full}. ${warn}` : full
@@ -142,7 +139,12 @@ export function ChipsRow() {
               title={label}
               onClick={() => selectTeamMember(i)}
             >
-              {chipLabel(full)}
+              {text}
+              {badge && (
+                <span className="chip__forme" aria-hidden="true">
+                  {badge}
+                </span>
+              )}
               {illegal && (
                 <span className="chip__warn" aria-hidden="true">
                   ⚠
