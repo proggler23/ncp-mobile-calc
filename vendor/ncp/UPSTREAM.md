@@ -3,15 +3,17 @@
 - Repository: https://github.com/nerd-of-now/NCP-VGC-Damage-Calculator
 - Branch: main
 - Commit SHA: a2e408ca905dd64d3ee29a1956edfbe74d1c4072 (committer date 2026-10-24)
+- Synced at: 2026-11-12T08:53:57Z
 - License: MIT (see `LICENSE`, copied unmodified from upstream)
 
-Files under `script_res/` are copied byte-for-byte from the upstream clone (no modifications).
-Only the data/engine scripts needed for damage computation are vendored. Not vendored: CSS,
-images, setdex files, select2, jQuery, UI-only scripts (`switch_mode.js`, `sidebars.js`,
-`statuscalc.js`, `afd_res/*`), `legacy_scripts/`.
+Files under `script_res/` are copied byte-for-byte from the upstream clone, except where a patch in
+`vendor/ncp-patches/` is listed below. Only the data/engine scripts needed for damage computation
+are vendored (list: `scripts/ncp-sync/config.ts`). Not vendored: CSS, images, setdex files,
+select2, jQuery, UI-only scripts (`switch_mode.js`, `sidebars.js`, `statuscalc.js`,
+`afd_res/*`), `legacy_scripts/`.
 
-To refresh: clone upstream into a new empty directory, check out the new SHA, re-copy the files
-listed below, update the SHA here and re-run `npm run golden:capture -- --upstream <clone dir>`.
+To refresh: `npm run ncp:sync` (see docs/MAINTENANCE.md). It re-vendors the files listed below,
+rewrites this file, rebuilds the bridge maps and re-captures the golden tests.
 
 ## sha256 of vendored files
 

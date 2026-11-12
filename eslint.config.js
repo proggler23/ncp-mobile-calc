@@ -6,7 +6,15 @@ import prettier from 'eslint-config-prettier'
 
 export default tseslint.config(
   {
-    ignores: ['dist', 'dev-dist', 'node_modules', 'playwright-report', 'test-results', 'vendor'],
+    ignores: [
+      'dist',
+      'dev-dist',
+      'node_modules',
+      'playwright-report',
+      'test-results',
+      'vendor',
+      '.cache',
+    ],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
@@ -14,6 +22,11 @@ export default tseslint.config(
   {
     files: ['**/*.{ts,tsx,js,mjs}'],
     languageOptions: { globals: { ...globals.browser, ...globals.node } },
+  },
+  {
+    files: ['**/*.cjs'],
+    languageOptions: { sourceType: 'commonjs', globals: { ...globals.node } },
+    rules: { '@typescript-eslint/no-require-imports': 'off' },
   },
   prettier,
 )

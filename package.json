@@ -18,7 +18,14 @@
     "typecheck:data": "tsc -p scripts/build-data/tsconfig.json",
     "build:bridge": "tsx scripts/build-bridge/index.ts",
     "build:assets": "npm run build:data && npm run build:bridge",
-    "typecheck:bridge": "tsc -p scripts/build-bridge/tsconfig.json"
+    "typecheck:bridge": "tsc -p scripts/build-bridge/tsconfig.json",
+    "build:version": "tsx scripts/build-data/version.ts",
+    "typecheck:scripts": "tsc -p scripts/tsconfig.json",
+    "check:data": "tsx scripts/check-data/index.ts",
+    "check:generated": "tsx scripts/check-data/generated.ts",
+    "build:offline": "NODE_OPTIONS=\"--require ./scripts/check-data/block-network.cjs\" npm run build",
+    "ncp:sync": "tsx scripts/ncp-sync/index.ts",
+    "ncp:patches": "tsx scripts/ncp-sync/index.ts --check-patches"
   },
   "dependencies": {
     "idb": "^8.0.4",
@@ -28,8 +35,6 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@pkmn/data": "^0.11.0",
-    "@pkmn/dex": "^0.11.0",
     "@playwright/test": "^1.65.0",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
@@ -43,6 +48,7 @@
     "fake-indexeddb": "^6.2.8",
     "globals": "^17.14.0",
     "jsdom": "^31.0.0",
+    "pokemon-showdown": "0.11.11",
     "prettier": "^3.10.1",
     "tsx": "^4.23.15",
     "typescript": "^6.0.3",

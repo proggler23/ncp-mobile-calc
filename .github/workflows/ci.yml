@@ -2,6 +2,8 @@ name: CI
 on:
   push:
   pull_request:
+permissions:
+  contents: read
 jobs:
   ci:
     runs-on: ubuntu-latest
@@ -14,5 +16,11 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck
+      - run: npm run typecheck:scripts
       - run: npm test
-      - run: npm run build
+      # generated data present + schema-valid, bridge maps identical to an offline rebuild,
+      # NCP patches (if any) applied to the vendored files
+      - run: npm run check:generated
+      - run: npm run ncp:patches
+      # proves the production build needs no network (same command the deploy workflow uses)
+      - run: npm run build:offline

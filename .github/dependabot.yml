@@ -1,0 +1,22 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      npm-minor-patch:
+        update-types: [minor, patch]
+        # pokemon-showdown is the game-data source: its bumps get their own PR so they are reviewed
+        # (and the data regenerated) separately, see docs/MAINTENANCE.md ("Updating Showdown").
+        exclude-patterns: [pokemon-showdown]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      github-actions:
+        patterns: ['*']
