@@ -3,6 +3,11 @@
 #   pass     -> commit to main as a bot and deploy (this run calls deploy.yml)
 #   anomaly  -> open a PR with the gate summary as its body; nothing is pushed to main
 #   fail     -> the job fails (GitHub notifies); nothing is committed
+# Two jobs so that no write permission is ever held while downloaded data / upstream scripts are
+# processed:
+#   build-and-check  read-only token; downloads, builds, tests; uploads the result as an artifact
+#   publish          contents + pull-requests write; runs NO repository code (no npm ci, no
+#                    scripts): it only validates the artifact's paths, applies it and pushes / PRs
 # Details, thresholds and rollback: docs/MAINTENANCE.md
 name: Auto update (data + NCP)
 on:
@@ -27,26 +32,20 @@ env:
   # Paths this workflow may change (everything else in the checkout is ignored / never committed)
   UPDATE_PATHS: src/data/generated src/bridge/generated src/engine/__golden__ vendor/ncp
 jobs:
-  update:
+  build-and-check:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     permissions:
-      contents: write
-      pull-requests: write
+      contents: read
     outputs:
       status: ${{ steps.gate.outputs.status }}
-      deploy: ${{ steps.commit.outputs.deploy }}
-      sha: ${{ steps.commit.outputs.sha }}
-    env:
-      # A fine-grained PAT / GitHub App token that may push to the protected default branch.
-      # Without it GITHUB_TOKEN is used (works only if branch protection does not block it).
-      HAS_PAT: ${{ secrets.AUTO_UPDATE_TOKEN != '' }}
+      changed: ${{ steps.diff.outputs.changed }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           ref: ${{ github.event.repository.default_branch }}
-          token: ${{ secrets.AUTO_UPDATE_TOKEN || github.token }}
-      - uses: actions/setup-node@v4
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
           cache: npm
@@ -68,7 +67,7 @@ jobs:
       - name: Rebuild bridge maps
         run: npm run build:bridge
 
-      - name: Validation gates (schema, count deltas, bridge coverage, lint, typecheck, tests, build)
+      - name: Validation gates (schema, count deltas, bridge coverage, vendor checksums, lint, typecheck, tests, build)
         id: gate
         run: |
           ARGS=""
@@ -92,11 +91,75 @@ jobs:
           else
             echo "changed=false" >> "$GITHUB_OUTPUT"
           fi
+      - name: Anomaly without any file change
+        if: ${{ steps.gate.outputs.status == 'anomaly' && steps.diff.outputs.changed != 'true' }}
+        run: |
+          echo "::error::Gate reported an anomaly but there is nothing to put in a PR (see the summary)."
+          exit 1
+
+      # Hand the result to the publish job: a binary patch of the allowed paths + the gate summary.
+      - name: Package the result
+        if: ${{ steps.diff.outputs.changed == 'true' && (steps.gate.outputs.status == 'pass' || steps.gate.outputs.status == 'anomaly') }}
+        run: |
+          mkdir -p out
+          # shellcheck disable=SC2086
+          git add -A -- $UPDATE_PATHS
+          git diff --cached --binary > out/update.patch
+          cp .cache/check-data/result.md out/result.md
+          echo "${{ steps.gate.outputs.status }}" > out/status.txt
+      - name: Upload the result
+        if: ${{ steps.diff.outputs.changed == 'true' && (steps.gate.outputs.status == 'pass' || steps.gate.outputs.status == 'anomaly') }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: auto-update-result
+          path: out
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    needs: build-and-check
+    if: ${{ needs.build-and-check.outputs.changed == 'true' && (needs.build-and-check.outputs.status == 'pass' || needs.build-and-check.outputs.status == 'anomaly') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+    outputs:
+      deploy: ${{ steps.commit.outputs.deploy }}
+      sha: ${{ steps.commit.outputs.sha }}
+    env:
+      # A fine-grained PAT / GitHub App token that may push to the protected default branch.
+      # Without it GITHUB_TOKEN is used (works only if branch protection does not block it).
+      HAS_PAT: ${{ secrets.AUTO_UPDATE_TOKEN != '' }}
+      STATUS: ${{ needs.build-and-check.outputs.status }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          token: ${{ secrets.AUTO_UPDATE_TOKEN || github.token }}
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: auto-update-result
+          path: ${{ runner.temp }}/result
+
+      - name: Apply the result (only the allowed paths)
+        run: |
+          patch="$RUNNER_TEMP/result/update.patch"
+          # Refuse a patch that touches anything outside UPDATE_PATHS (or uses odd paths).
+          git apply --numstat -z "$patch" | tr '\0' '\n' | cut -f3- | while IFS= read -r f; do
+            ok=false
+            for p in $UPDATE_PATHS; do
+              case "$f" in "$p"/*|"$p") ok=true ;; esac
+            done
+            case "$f" in *..*|/*) ok=false ;; esac
+            if [ "$ok" != true ]; then echo "::error::Patch touches a disallowed path: $f"; exit 1; fi
+          done
+          git apply --whitespace=nowarn "$patch"
 
       # ---- pass: commit to the default branch, then deploy (called below) ----
       - name: Commit to main
         id: commit
-        if: ${{ steps.gate.outputs.status == 'pass' && steps.diff.outputs.changed == 'true' }}
+        if: ${{ env.STATUS == 'pass' }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -112,8 +175,8 @@ jobs:
 
       # ---- anomaly: open a PR for human review ----
       - name: Open a PR for review
-        if: ${{ steps.gate.outputs.status == 'anomaly' && steps.diff.outputs.changed == 'true' }}
-        uses: peter-evans/create-pull-request@v7
+        if: ${{ env.STATUS == 'anomaly' }}
+        uses: peter-evans/create-pull-request@22a9089034f40e5a961c8808d113e2c98fb63676 # v7.0.11
         with:
           token: ${{ secrets.AUTO_UPDATE_TOKEN || github.token }}
           branch: auto-update/data
@@ -126,21 +189,16 @@ jobs:
             vendor/ncp
           commit-message: 'chore(data): weekly refresh (needs review: gate anomaly)'
           title: 'chore(data): weekly refresh needs review (gate anomaly)'
-          body-path: .cache/check-data/result.md
+          body-path: ${{ runner.temp }}/result/result.md
           labels: data
-      - name: Anomaly without any file change
-        if: ${{ steps.gate.outputs.status == 'anomaly' && steps.diff.outputs.changed != 'true' }}
-        run: |
-          echo "::error::Gate reported an anomaly but there is nothing to put in a PR (see the summary)."
-          exit 1
 
   deploy:
-    needs: update
-    if: ${{ needs.update.outputs.deploy == 'true' }}
+    needs: publish
+    if: ${{ needs.publish.outputs.deploy == 'true' }}
     permissions:
       contents: read
       pages: write
       id-token: write
     uses: ./.github/workflows/deploy.yml
     with:
-      ref: ${{ needs.update.outputs.sha }}
+      ref: ${{ needs.publish.outputs.sha }}

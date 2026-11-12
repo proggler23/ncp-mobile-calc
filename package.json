@@ -23,6 +23,7 @@
     "typecheck:scripts": "tsc -p scripts/tsconfig.json",
     "check:data": "tsx scripts/check-data/index.ts",
     "check:generated": "tsx scripts/check-data/generated.ts",
+    "check:vendor": "tsx scripts/check-data/vendor.ts",
     "build:offline": "NODE_OPTIONS=\"--require ./scripts/check-data/block-network.cjs\" npm run build",
     "ncp:sync": "tsx scripts/ncp-sync/index.ts",
     "ncp:patches": "tsx scripts/ncp-sync/index.ts --check-patches"
