@@ -3,6 +3,7 @@ import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 import { readFileSync } from 'node:fs'
+import { normalizeBase } from './scripts/vite-base.ts'
 
 /** The generation whose data ships in the precache (the current VGC format). */
 const PRECACHED_GEN = 'champions'
@@ -13,7 +14,7 @@ const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
-  const base = env.VITE_BASE || process.env.VITE_BASE || '/'
+  const base = normalizeBase(env.VITE_BASE || process.env.VITE_BASE)
   return {
     base,
     define: { __APP_VERSION__: JSON.stringify(pkg.version) },

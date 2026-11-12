@@ -23,11 +23,28 @@ interface Entry {
 let stack: Entry[] = []
 /** Number of programmatic `history.back()` calls whose popstate must be ignored. */
 let ignorePops = 0
+/** Safety net: a programmatic `history.back()` whose popstate never arrives must not stick. */
+const IGNORE_POPS_TIMEOUT_MS = 1000
+let ignoreTimer: ReturnType<typeof setTimeout> | undefined
 let listening = false
 let seq = 0
 
 export function nextOverlayId(): number {
   return ++seq
+}
+
+/** Performs `history.back()` and swallows its popstate (with a timeout if it never comes). */
+function backIgnoringPop(): void {
+  ignorePops++
+  history.back()
+  clearTimeout(ignoreTimer)
+  ignoreTimer = setTimeout(() => {
+    ignoreTimer = undefined
+    if (ignorePops > 0) {
+      ignorePops = 0
+      flushWaiting()
+    }
+  }, IGNORE_POPS_TIMEOUT_MS)
 }
 
 function ensureListener(): void {
@@ -73,6 +90,7 @@ export function whenOverlaysSettled(fn: () => void): void {
 function onPop(): void {
   if (ignorePops > 0) {
     ignorePops--
+    if (ignorePops === 0) clearTimeout(ignoreTimer)
     flushWaiting()
     return
   }
@@ -92,8 +110,7 @@ function onDeadPopped(): void {
   const next = stack[stack.length - 1]
   if (next?.dead) {
     stack.pop()
-    ignorePops++
-    history.back()
+    backIgnoringPop()
     drainDead()
   }
 }
@@ -102,8 +119,7 @@ function onDeadPopped(): void {
 function drainDead(): void {
   while (stack.length && stack[stack.length - 1]!.dead) {
     stack.pop()
-    ignorePops++
-    history.back()
+    backIgnoringPop()
   }
 }
 
@@ -144,8 +160,7 @@ function finalizeRelease(id: number): void {
   if (!e || !e.releasing) return
   if (idx === stack.length - 1) {
     stack.pop()
-    ignorePops++
-    history.back()
+    backIgnoringPop()
     drainDead()
   } else {
     e.dead = true
@@ -161,5 +176,6 @@ export function overlayDepth(): number {
 export function resetOverlays(): void {
   stack = []
   ignorePops = 0
+  clearTimeout(ignoreTimer)
   waiting = []
 }
