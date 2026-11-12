@@ -12,3 +12,4 @@ blob-report
 *.tsbuildinfo
 coverage
 .cache/
+e2e/screenshots
