@@ -31,6 +31,11 @@ export interface RegConfig {
   /** Showdown format name; absent for regulations that only exist in manual.json */
   format?: string
   default?: boolean
+  /**
+   * Smogon usage stats behind the "popular" lists of this regulation (popular.json); absent when
+   * Smogon has no stats for it. Months are candidates tried in order (newest first).
+   */
+  usage?: VgcFormat
 }
 
 export interface GenConfig {
@@ -176,10 +181,26 @@ export const GENS: GenConfig[] = [
         label: { en: 'Reg I', de: 'Reg. I' },
         format: '[Gen 9] VGC 2025 Reg I',
         default: true,
+        usage: { id: 'gen9vgc2025regi', months: ['2025-06', '2025-07', '2025-08'] },
       },
-      { id: 'regg', label: { en: 'Reg G', de: 'Reg. G' }, format: '[Gen 9] VGC 2024 Reg G' },
-      { id: 'regd', label: { en: 'Reg D', de: 'Reg. D' }, format: '[Gen 9] VGC 2023 Reg D' },
-      { id: 'regc', label: { en: 'Reg C', de: 'Reg. C' }, format: '[Gen 9] VGC 2023 Reg C' },
+      {
+        id: 'regg',
+        label: { en: 'Reg G', de: 'Reg. G' },
+        format: '[Gen 9] VGC 2024 Reg G',
+        usage: { id: 'gen9vgc2024regg', months: ['2024-06', '2024-07', '2024-05'] },
+      },
+      {
+        id: 'regd',
+        label: { en: 'Reg D', de: 'Reg. D' },
+        format: '[Gen 9] VGC 2023 Reg D',
+        usage: { id: 'gen9vgc2023regulationd', months: ['2023-08', '2023-09', '2023-10'] },
+      },
+      {
+        id: 'regc',
+        label: { en: 'Reg C', de: 'Reg. C' },
+        format: '[Gen 9] VGC 2023 Reg C',
+        usage: { id: 'gen9vgc2023regulationc', months: ['2023-04', '2023-05', '2023-06'] },
+      },
     ],
     vgc: [
       { id: 'gen9vgc2026regi', months: ['2026-05', '2026-04', '2026-03'] },
@@ -214,16 +235,19 @@ export const GENS: GenConfig[] = [
         label: { en: 'Reg M-C', de: 'Reg. M-C' },
         format: '[Gen 9 Champions] VGC 2026 Reg M-C',
         default: true,
+        usage: { id: 'gen9championsvgc2026regmc', months: ['2026-11', '2026-10', '2026-09'] },
       },
       {
         id: 'regmb',
         label: { en: 'Reg M-B', de: 'Reg. M-B' },
         format: '[Gen 9 Champions] VGC 2026 Reg M-B',
+        usage: { id: 'gen9championsvgc2026regmb', months: ['2026-08', '2026-07', '2026-06'] },
       },
       {
         id: 'regma',
         label: { en: 'Reg M-A', de: 'Reg. M-A' },
         format: '[Gen 9 Champions] VGC 2026 Reg M-A',
+        usage: { id: 'gen9championsvgc2026regma', months: ['2026-05', '2026-06', '2026-04'] },
       },
     ],
     vgc: [

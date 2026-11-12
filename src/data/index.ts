@@ -1,4 +1,12 @@
-import type { DexFile, GenData, GenId, Learnsets, RegulationsFile, SetsFile } from './types'
+import type {
+  DexFile,
+  GenData,
+  GenId,
+  Learnsets,
+  PopularFile,
+  RegulationsFile,
+  SetsFile,
+} from './types'
 import { GEN_IDS } from './types'
 import { own } from '../own'
 
@@ -11,6 +19,7 @@ type Loader<T> = () => Promise<{ default: T }>
 const dexLoaders = import.meta.glob<{ default: DexFile }>('./generated/*/dex.json')
 const learnsetLoaders = import.meta.glob<{ default: Learnsets }>('./generated/*/learnsets.json')
 const setLoaders = import.meta.glob<{ default: SetsFile }>('./generated/*/sets.json')
+const popularLoaders = import.meta.glob<{ default: PopularFile }>('./generated/*/popular.json')
 const regulationLoaders = import.meta.glob<{ default: RegulationsFile }>(
   './generated/*/regulations.json',
 )
@@ -44,6 +53,7 @@ export function loadGenData(gen: GenId): Promise<GenData> {
         learnsets: learnsets.default,
         regulations: regs?.default.regulations ?? [],
         loadSets: () => loadSets(gen),
+        loadPopular: () => loadPopular(gen),
       }
     })()
     p.catch(() => cache.delete(gen))
@@ -62,6 +72,7 @@ export async function prefetchGenData(gen: GenId): Promise<void> {
     pick(learnsetLoaders, gen, 'learnsets.json')(),
     pick(setLoaders, gen, 'sets.json')(),
     regulationLoaders[`./generated/${gen}/regulations.json`]?.(),
+    popularLoaders[`./generated/${gen}/popular.json`]?.(),
   ])
 }
 
@@ -71,6 +82,21 @@ export function loadSets(gen: GenId): Promise<SetsFile> {
     p = pick(setLoaders, gen, 'sets.json')().then((m) => m.default)
     p.catch(() => setsCache.delete(gen))
     setsCache.set(gen, p)
+  }
+  return p
+}
+
+const popularCache = new Map<GenId, Promise<PopularFile | undefined>>()
+
+/** Popularity (Smogon usage) per regulation; `undefined` for generations without it. */
+export function loadPopular(gen: GenId): Promise<PopularFile | undefined> {
+  const loader = popularLoaders[`./generated/${gen}/popular.json`]
+  if (!loader) return Promise.resolve(undefined)
+  let p = popularCache.get(gen)
+  if (!p) {
+    p = loader().then((m) => m.default)
+    p.catch(() => popularCache.delete(gen))
+    popularCache.set(gen, p)
   }
   return p
 }

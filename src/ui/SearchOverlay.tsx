@@ -15,6 +15,18 @@ export interface SearchItem {
 
 const LIMIT = 100
 
+/** Most used entries of the list (Smogon usage), shown first with their share. */
+export interface PopularSection {
+  /** "Popular in Reg M-C" */
+  title: string
+  /** Header of the full list below it, "All legal moves" */
+  allTitle: string
+  /** Attribution line at the top of the section */
+  caption: string
+  /** [id, usage percent]; ids that are not in `items` (not allowed right now) are ignored */
+  entries: readonly (readonly [id: string, pct: number])[]
+}
+
 export function filterItems(items: readonly SearchItem[], query: string): SearchItem[] {
   const q = normalizeSearch(query)
   if (!q) return items.slice(0, LIMIT)
@@ -40,6 +52,11 @@ interface Props {
   /** Pinned row above the results, e.g. "No item". */
   clearLabel?: string
   notice?: string
+  /**
+   * Without a query: this section (sorted by usage) followed by the full list. With a query: the
+   * matching popular entries come first (with their %), then the other matches, no duplicates.
+   */
+  popular?: PopularSection
 }
 
 /** Full-screen search list: autofocused input (16px, no iOS zoom), big tap rows. */
@@ -51,11 +68,51 @@ export function SearchOverlay({
   onClose,
   clearLabel,
   notice,
+  popular,
 }: Props) {
   const t = useT()
   const [query, setQuery] = useState('')
   const hits = useMemo(() => filterItems(items, query), [items, query])
-  const shown = hits.slice(0, LIMIT)
+  // Popular entries that are in the list (i.e. currently allowed), highest usage first.
+  const pops = useMemo(() => {
+    const byId = new Map(items.map((it) => [it.id, it]))
+    const seen = new Set<string>()
+    const out: { item: SearchItem; pct: number }[] = []
+    for (const [id, pct] of popular?.entries ?? []) {
+      const item = byId.get(id)
+      if (item && !seen.has(id)) {
+        seen.add(id)
+        out.push({ item, pct })
+      }
+    }
+    return out.sort((a, b) => b.pct - a.pct)
+  }, [items, popular])
+  const searching = query.trim() !== ''
+  const popularRows = useMemo(() => {
+    if (!searching) return pops
+    const hit = new Set(hits.map((h) => h.id))
+    return pops.filter((p) => hit.has(p.item.id))
+  }, [pops, hits, searching])
+  const pctOf = useMemo(() => new Map(popularRows.map((p) => [p.item.id, p.pct])), [popularRows])
+  // While searching the matches that are popular lead the list and are not repeated below.
+  const rest = searching ? hits.filter((h) => !pctOf.has(h.id)) : hits
+  const shown = rest.slice(0, LIMIT)
+  const first = popularRows[0]?.item ?? shown[0]
+  const hasPopular = popularRows.length > 0
+  const row = (it: SearchItem, pct?: number) => (
+    <li key={it.id}>
+      <button
+        type="button"
+        className={pct === undefined ? 'row' : 'row row--pop'}
+        onClick={() => onPick(it.id)}
+      >
+        <span className="row__primary">{it.primary}</span>
+        {it.secondary && <span className="row__secondary">{it.secondary}</span>}
+        {pct !== undefined && <span className="row__pct">{pct.toFixed(1)} %</span>}
+        {it.detail && <span className="row__detail">{it.detail}</span>}
+      </button>
+    </li>
+  )
 
   return (
     <Dialog
@@ -70,7 +127,6 @@ export function SearchOverlay({
           role="search"
           onSubmit={(e) => {
             e.preventDefault()
-            const first = shown[0]
             if (first) onPick(first.id)
           }}
         >
@@ -99,23 +155,36 @@ export function SearchOverlay({
           {clearLabel}
         </button>
       )}
-      {shown.length === 0 ? (
+      {!first ? (
         <p className="muted pad">{t('search.empty')}</p>
       ) : (
-        <ul className="list" aria-label={title}>
-          {shown.map((it) => (
-            <li key={it.id}>
-              <button type="button" className="row" onClick={() => onPick(it.id)}>
-                <span className="row__primary">{it.primary}</span>
-                {it.secondary && <span className="row__secondary">{it.secondary}</span>}
-                {it.detail && <span className="row__detail">{it.detail}</span>}
-              </button>
-            </li>
-          ))}
-        </ul>
+        <>
+          {hasPopular && popular && (
+            <div>
+              {!searching && <h3 className="list__head">{popular.title}</h3>}
+              <p className="list__caption">{popular.caption}</p>
+              <ul className="list" aria-label={popular.title}>
+                {popularRows.map((p) => row(p.item, p.pct))}
+              </ul>
+            </div>
+          )}
+          {shown.length > 0 && (
+            <div>
+              {hasPopular && !searching && popular && (
+                <h3 className="list__head">{popular.allTitle}</h3>
+              )}
+              <ul
+                className="list"
+                aria-label={hasPopular && !searching ? popular?.allTitle : title}
+              >
+                {shown.map((it) => row(it))}
+              </ul>
+            </div>
+          )}
+        </>
       )}
-      {hits.length > LIMIT && (
-        <p className="muted pad">{t('search.more', { n: hits.length - LIMIT })}</p>
+      {rest.length > LIMIT && (
+        <p className="muted pad">{t('search.more', { n: rest.length - LIMIT })}</p>
       )}
     </Dialog>
   )

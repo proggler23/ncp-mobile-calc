@@ -136,6 +136,39 @@ everything the engine knows). Regulations are listed in `scripts/build-data/conf
 - The state of the lists is visible in-app (menu -> data sources: active regulation and whether its
   list is derived or hand-maintained) and in `version.json` (`regulations`).
 
+## Popular lists (Smogon usage per regulation)
+
+`src/data/generated/<gen>/popular.json` (champions, sv) holds, per regulation and species, the top 10
+moves, items, abilities and natures of the Smogon VGC chaos stats with their usage in % (1 decimal):
+moves are the share of the species' users that run the move (can sum to 400 %), items / abilities /
+natures are shares of the species' total (natures aggregated from the spread keys, also for
+Champions stat-point spreads). Names are mapped to Showdown ids and entries outside the gen's dex
+(and `Other` / `Nothing` / empty) are dropped before the top-10 cut. Shape:
+`{ source: 'smogon', regs: { <regId>: { format, month, cutoff, battles, species: { <speciesId>:
+{ moves: [[id, pct]...], items, abilities, natures } } } } }` (`meta` is per regulation because each
+regulation has its own format and month).
+
+- Source per regulation: `RegConfig.usage` in `config.ts` (`{ id, months }`; months = candidates, newest
+  first). Cutoff 1760, falling back to 1630 / 1500 / 0 per month, then to the next candidate month.
+  Regulations without Smogon stats simply have no `usage` and no popular section in the app.
+- Same fallback as the sets: if a regulation's download fails or has no usable stats, the previously
+  committed entry for that regulation is kept (`sources.json` -> `gens.<gen>.popularFallback`).
+- Refresh: `npm run build:data -- --refresh` (champions, also in the weekly job; `UPDATE_PATHS`
+  already covers `src/data/generated`). sv is frozen: `npm run build:data -- --gen sv`. New
+  regulation: add `usage` to its `RegConfig`; the gates (`check:generated`, `check:data`) fail when a
+  configured regulation lacks popular data, validate the schema (ids in the dex, sorted, <= 10
+  entries, 0 < pct <= 100) and compare the species count per regulation with `HEAD` (>5 % drop =
+  anomaly, >= 50 % or a regulation disappearing = fail).
+- Provenance: `version.json` -> `popular` (format, month, cutoff per regulation), shown in the menu
+  under "Popular lists" for the active regulation.
+- In the app (`state/popular.ts`, `ui/SearchOverlay.tsx`): the move, item, ability and nature pickers
+  show "Popular in <regulation>" (sorted by %, right-aligned %, attribution caption) before the full
+  alphabetical list. Popular entries are filtered to what the picker offers (legal in the
+  regulation, learnable, species-own ability). With a search query the matching popular entries stay
+  on top with their % and are not repeated below (no headers). No popular section for "No filter",
+  for species/regulations without data, or when nothing remains after filtering. The nature field is a
+  picker (not a native select) so it can have the same sections.
+
 ## Roll back
 
 Every automatic update is one commit on `main` ("chore(data): weekly refresh ..."): `git revert

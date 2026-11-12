@@ -1,7 +1,7 @@
 # scripts/build-data
 
 `npm run build:data` (tsx) writes `src/data/generated/<gen>/{dex,learnsets,sets}.json` (plus
-`regulations.json` for gens with regulations),
+`regulations.json` / `popular.json` for gens with regulations / Smogon regulation stats),
 `generated/sources.json` and `generated/version.json`.
 
 | command                                | effect                                                                                |
@@ -32,6 +32,9 @@ written unless selected with `--all` / `--gen`.
    `version.json` (`usageMonths`).
 4. `sets-merge.ts` + `sets/curated.json` - curated sets layered over the generated ones
    (schema documented in the JSON's `$comment` and in docs/MAINTENANCE.md).
+   4b. `popular.ts` - top 10 moves/items/abilities/natures per species for each regulation with a
+   `usage` format in `config.ts` -> `popular.json` (see docs/MAINTENANCE.md, "Popular lists"). Same
+   downloads/fallbacks as `sets.ts` (`chooseChaos`).
 5. `regulations.ts` - legal pools per regulation, see "Regulations" below.
 6. `version.ts` - `version.json` (`ncpSha`, `ncpSyncedAt`, `showdownVersion`, `usageMonths`,
    `regulations` (source of each regulation list), `namesSnapshotDate`, `builtAt`), exposed to the app as `getDataVersionInfo()` (`src/data/version.ts`).

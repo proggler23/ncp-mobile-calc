@@ -110,6 +110,41 @@ export function compareRegulationCounts(
   return { reasons, deltas }
 }
 
+/**
+ * Compare the number of species with popular data per regulation with the previous snapshot (same
+ * thresholds as the dex counts). Keys are `<gen>/<regulation id>`; a regulation that lost its data
+ * fails, a new one is fine.
+ */
+export function comparePopularCounts(
+  prev: Record<string, number>,
+  cur: Record<string, number>,
+  t = THRESHOLDS,
+): { reasons: Reason[]; deltas: Record<string, number> } {
+  const reasons: Reason[] = []
+  const deltas: Record<string, number> = {}
+  for (const [key, p] of Object.entries(prev)) {
+    const c = cur[key]
+    if (c === undefined) {
+      reasons.push({
+        level: 'fail',
+        code: 'popular-missing',
+        message: `${key}: popular data disappeared`,
+      })
+      continue
+    }
+    if (c !== p) deltas[key] = c - p
+    if (p <= 0) continue
+    const drop = (p - c) / p
+    if (drop <= t.countDropAnomaly) continue
+    reasons.push({
+      level: drop >= t.countDropFail ? 'fail' : 'anomaly',
+      code: 'popular-count-drop',
+      message: `${key}: species with popular data dropped ${(drop * 100).toFixed(1)}% (${p} -> ${c}; threshold ${t.countDropAnomaly * 100}%)`,
+    })
+  }
+  return { reasons, deltas }
+}
+
 /** gen -> kind -> unmatched names on each side (src/bridge/generated/coverage.json) */
 export type Coverage = Record<string, Record<string, { ncpOnly: string[]; sdOnly: string[] }>>
 

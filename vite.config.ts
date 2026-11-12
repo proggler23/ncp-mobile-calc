@@ -26,7 +26,9 @@ export default defineConfig(({ mode }) => {
           chunkFileNames: (chunk) => {
             const id = (chunk.facadeModuleId ?? '').replaceAll('\\', '/')
             const data =
-              /\/src\/data\/generated\/([^/]+)\/(dex|learnsets|sets|regulations)\.json/.exec(id)
+              /\/src\/data\/generated\/([^/]+)\/(dex|learnsets|sets|regulations|popular)\.json/.exec(
+                id,
+              )
             if (data) return `assets/gendata-${data[1]}-${data[2]}-[hash].js`
             const map = /\/src\/bridge\/generated\/([^/]+)\.json/.exec(id)
             if (map) return `assets/genmap-${map[1]}-[hash].js`

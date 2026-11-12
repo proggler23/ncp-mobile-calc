@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   compareCounts,
   compareCoverage,
+  comparePopularCounts,
   compareRegulationCounts,
   goldenReasons,
   makeResult,
@@ -128,6 +129,31 @@ describe('compareRegulationCounts', () => {
     expect(compareRegulationCounts(prev, {}).reasons[0]).toMatchObject({
       level: 'fail',
       code: 'regulation-missing',
+    })
+  })
+})
+
+describe('comparePopularCounts', () => {
+  const prev = { 'champions/regmc': 277 }
+  it('passes unchanged, grown and new regulations, and reports deltas', () => {
+    expect(comparePopularCounts(prev, prev).reasons).toEqual([])
+    const r = comparePopularCounts(prev, { 'champions/regmc': 280, 'champions/regmd': 5 })
+    expect(r.reasons).toEqual([])
+    expect(r.deltas).toEqual({ 'champions/regmc': 3 })
+  })
+  it('flags a drop above 5% as anomaly and 50% as fail', () => {
+    expect(comparePopularCounts(prev, { 'champions/regmc': 250 }).reasons[0]).toMatchObject({
+      level: 'anomaly',
+      code: 'popular-count-drop',
+    })
+    expect(comparePopularCounts(prev, { 'champions/regmc': 100 }).reasons[0]).toMatchObject({
+      level: 'fail',
+    })
+  })
+  it('fails when a regulation loses its popular data', () => {
+    expect(comparePopularCounts(prev, {}).reasons[0]).toMatchObject({
+      level: 'fail',
+      code: 'popular-missing',
     })
   })
 })

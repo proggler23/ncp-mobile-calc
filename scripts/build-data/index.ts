@@ -19,6 +19,7 @@ import { buildRegulations, loadManual, manualExtras } from './regulations'
 import type { ManualFile } from './regulations'
 import { loadDeTables, lookupDe, speciesDe } from './names'
 import type { DeResult, DeTables } from './names'
+import { buildPopular } from './popular'
 import { buildSets, chooseChaos } from './sets'
 import type { ChosenFormat } from './sets'
 import { mergeCurated, stripCurated, validateCurated } from './sets-merge'
@@ -30,6 +31,7 @@ import type {
   MoveRecord,
   NamedRecord,
   SearchEntry,
+  PopularFile,
   SetsFile,
   SpeciesRecord,
 } from '../../src/data/types'
@@ -191,6 +193,13 @@ async function buildGen(cfg: GenConfig, de: DeTables, curated: CuratedFile, manu
   if (errors.length) throw new Error(errors.join('\n'))
   const sets = mergeCurated(generated, curatedEntries)
 
+  // Popular moves/items/abilities/natures per regulation (same Smogon source, same fallbacks).
+  const popular = await buildPopular(
+    raw,
+    cfg.regulations ?? [],
+    await readJsonIfExists<PopularFile>(path.join(dir, 'popular.json')),
+  )
+
   const regs = buildRegulations(cfg.id, cfg.regulations, raw, manual)
   await mkdir(dir, { recursive: true })
   if (regs) await writeFile(path.join(dir, 'regulations.json'), json(regs.file))
@@ -199,6 +208,7 @@ async function buildGen(cfg: GenConfig, de: DeTables, curated: CuratedFile, manu
     'dex.json': json(dex),
     'learnsets.json': json(raw.learnsets),
     'sets.json': json(sets),
+    ...(popular.file ? { 'popular.json': json(popular.file) } : {}),
   }
   const sizes: Record<string, { raw: number; gzip: number }> = {}
   for (const [name, content] of Object.entries(files)) {
@@ -221,6 +231,7 @@ async function buildGen(cfg: GenConfig, de: DeTables, curated: CuratedFile, manu
     missing,
     sizes,
     chosen,
+    popular,
     usage,
     months: usageMonthsOf(sets),
     formats: formatsOf(sets),
@@ -286,6 +297,23 @@ async function main() {
                   url: c.url,
                 }))
               : r.formats,
+            ...(r.popular.file
+              ? {
+                  popular: Object.fromEntries(
+                    Object.entries(r.popular.file.regs).map(([id, p]) => [
+                      id,
+                      {
+                        format: p.format,
+                        month: p.month,
+                        cutoff: p.cutoff,
+                        battles: p.battles,
+                        url: `https://www.smogon.com/stats/${p.month}/chaos/${p.format}-${p.cutoff}.json`,
+                      },
+                    ]),
+                  ),
+                }
+              : {}),
+            ...(r.popular.kept.length ? { popularFallback: r.popular.kept } : {}),
             ...(r.usage.fallback ? { usageFallback: r.usage.reason } : {}),
             gaps: r.cfg.gaps,
           },
@@ -304,6 +332,10 @@ async function main() {
       )
     }
     for (const n of r.regulations?.notes ?? []) console.warn(`  note: ${n}`)
+    for (const [id, p] of Object.entries(r.popular.file?.regs ?? {}))
+      console.log(
+        `  [${r.cfg.id}] popular ${id.padEnd(6)} ${p.format} ${p.month} @${p.cutoff} battles ${p.battles} species ${Object.keys(p.species).length}`,
+      )
   }
 
   // Report

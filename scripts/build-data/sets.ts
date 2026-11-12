@@ -6,7 +6,7 @@ import type { RawGen } from './dex-sources'
 const STATS_BASE = 'https://www.smogon.com/stats'
 const CUTOFFS = [1760, 1630, 1500, 0]
 
-interface ChaosSpecies {
+export interface ChaosSpeciesLike {
   'Raw count'?: number
   usage?: number
   Abilities?: Record<string, number>
@@ -15,9 +15,9 @@ interface ChaosSpecies {
   Moves?: Record<string, number>
   'Tera Types'?: Record<string, number>
 }
-interface Chaos {
+export interface Chaos {
   info: { metagame: string; cutoff: number; 'number of battles': number }
-  data: Record<string, ChaosSpecies>
+  data: Record<string, ChaosSpeciesLike>
 }
 
 export interface ChosenFormat {

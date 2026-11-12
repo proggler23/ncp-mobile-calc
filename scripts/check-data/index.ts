@@ -22,13 +22,14 @@ import path from 'node:path'
 import {
   compareCounts,
   compareCoverage,
+  comparePopularCounts,
   compareRegulationCounts,
   makeResult,
   mergeResults,
   renderMarkdown,
 } from './gates'
 import type { CheckResult, Coverage, CountMap, GateResult, Reason } from './gates'
-import { countsOf, regulationCountsOf, validateGen, VersionSchema } from './schema'
+import { countsOf, popularCountsOf, regulationCountsOf, validateGen, VersionSchema } from './schema'
 import { GENS } from '../build-data/config'
 import type { Files, RegulationCounts } from './schema'
 
@@ -88,16 +89,25 @@ function main() {
   // 1. schema + referential validation of every gen (frozen gens included)
   const cur: CountMap = {}
   const curReg: Record<string, RegulationCounts> = {}
+  const curPop: Record<string, number> = {}
   const schemaErrors: string[] = []
   const gens = genDirs()
   for (const gen of gens) {
     const regFile = `${GENERATED}/${gen}/regulations.json`
+    const popFile = `${GENERATED}/${gen}/popular.json`
     const files: Files = {
       dex: readJson(`${GENERATED}/${gen}/dex.json`),
       learnsets: readJson(`${GENERATED}/${gen}/learnsets.json`),
       sets: readJson(`${GENERATED}/${gen}/sets.json`),
       ...(existsSync(path.join(ROOT, regFile)) ? { regulations: readJson(regFile) } : {}),
+      ...(existsSync(path.join(ROOT, popFile)) ? { popular: readJson(popFile) } : {}),
     }
+    for (const [rid, n] of Object.entries(popularCountsOf(files.popular)))
+      curPop[`${gen}/${rid}`] = n
+    // config.ts names Smogon usage for a regulation -> popular.json must have it
+    for (const w of GENS.find((g) => g.id === gen)?.regulations ?? [])
+      if (w.usage && !(`${gen}/${w.id}` in curPop))
+        schemaErrors.push(`${gen}/popular.json: regulation "${w.id}" (config.ts usage) is missing`)
     // config.ts lists regulations for this gen -> the file must exist with exactly those ids
     const wanted = GENS.find((g) => g.id === gen)?.regulations?.map((r) => r.id) ?? []
     const have = regulationCountsOf(files.regulations)
@@ -162,11 +172,33 @@ function main() {
         detail: `${Object.keys(curReg).length} regulations vs ${BASE}`,
       })
     }
+    // species with popular data per regulation (only compared when the baseline already had them)
+    const prevPop: Record<string, number> = {}
+    for (const gen of gens)
+      for (const [rid, n] of Object.entries(
+        popularCountsOf(gitShow(`${GENERATED}/${gen}/popular.json`)),
+      ))
+        prevPop[`${gen}/${rid}`] = n
+    if (Object.keys(prevPop).length) {
+      const pr = comparePopularCounts(prevPop, curPop)
+      reasons.push(...pr.reasons)
+      metrics.popularDeltas = pr.deltas
+      checks.push({
+        name: 'popular-count-delta',
+        status: pr.reasons.some((x) => x.level === 'fail')
+          ? 'fail'
+          : pr.reasons.length
+            ? 'anomaly'
+            : 'pass',
+        detail: `${Object.keys(curPop).length} regulations vs ${BASE}`,
+      })
+    }
   } else {
     notes.push(`No committed snapshot at ${BASE}; count-delta check skipped.`)
   }
   metrics.counts = cur
   metrics.regulationCounts = curReg
+  metrics.popularCounts = curPop
 
   // 3. bridge coverage diff (the bridge build is offline and deterministic)
   if (!flag('--no-bridge')) {

@@ -9,7 +9,7 @@ import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from 'node
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { GEN_IDS } from '../../src/data/types'
-import { regulationCountsOf, validateGen, VersionSchema } from './schema'
+import { popularCountsOf, regulationCountsOf, validateGen, VersionSchema } from './schema'
 import { GENS } from '../build-data/config'
 
 const ROOT = path.resolve(import.meta.dirname, '../..')
@@ -34,8 +34,21 @@ for (const gen of GEN_IDS) {
   const have = regulationCountsOf(regulations)
   for (const w of wanted)
     if (!(w.id in have)) errors.push(`${gen}: regulations.json lacks "${w.id}" (config.ts)`)
+  const popFile = path.join(G, gen, 'popular.json')
+  const popular = existsSync(popFile) ? read(popFile) : undefined
+  // every regulation of config.ts that names Smogon usage needs its popular data
+  const havePop = popularCountsOf(popular)
+  for (const w of wanted)
+    if (w.usage && !(w.id in havePop))
+      errors.push(`${gen}: popular.json lacks "${w.id}" (config.ts usage)`)
   errors.push(
-    ...validateGen(gen, { dex, learnsets, sets, ...(regulations ? { regulations } : {}) }).errors,
+    ...validateGen(gen, {
+      dex,
+      learnsets,
+      sets,
+      ...(regulations ? { regulations } : {}),
+      ...(popular ? { popular } : {}),
+    }).errors,
   )
 }
 if (!existsSync(path.join(G, 'version.json'))) errors.push('version.json missing')

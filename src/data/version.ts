@@ -15,10 +15,21 @@ export interface DataVersionInfo {
   usageMonths: Record<string, string[]>
   /** Which source each regulation's legal pool was built from (generations without regulations are absent) */
   regulations?: Record<string, Record<string, RegulationSourceInfo>>
+  /** Smogon usage behind the "popular" lists, per generation and regulation (popular.json) */
+  popular?: Record<string, Record<string, PopularSourceInfo>>
   /** Date (YYYY-MM-DD) the German names snapshot was built from PokeAPI */
   namesSnapshotDate: string
   /** ISO timestamp of the last data build that changed anything */
   builtAt: string
+}
+
+export interface PopularSourceInfo {
+  /** Smogon stats format id */
+  format: string
+  /** YYYY-MM */
+  month: string
+  /** Rating cutoff (1760 unless Smogon had no such file) */
+  cutoff: number
 }
 
 export interface RegulationSourceInfo {

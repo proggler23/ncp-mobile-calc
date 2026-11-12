@@ -79,6 +79,47 @@
       }
     }
   },
+  "popular": {
+    "champions": {
+      "regmc": {
+        "format": "gen9championsvgc2026regmc",
+        "month": "2026-10",
+        "cutoff": 1760
+      },
+      "regmb": {
+        "format": "gen9championsvgc2026regmb",
+        "month": "2026-08",
+        "cutoff": 1760
+      },
+      "regma": {
+        "format": "gen9championsvgc2026regma",
+        "month": "2026-05",
+        "cutoff": 1760
+      }
+    },
+    "sv": {
+      "regi": {
+        "format": "gen9vgc2025regi",
+        "month": "2025-06",
+        "cutoff": 1760
+      },
+      "regg": {
+        "format": "gen9vgc2024regg",
+        "month": "2024-06",
+        "cutoff": 1760
+      },
+      "regd": {
+        "format": "gen9vgc2023regulationd",
+        "month": "2023-08",
+        "cutoff": 1760
+      },
+      "regc": {
+        "format": "gen9vgc2023regulationc",
+        "month": "2023-04",
+        "cutoff": 1760
+      }
+    }
+  },
   "namesSnapshotDate": "2026-11-12",
-  "builtAt": "2026-11-12T12:47:02.752Z"
+  "builtAt": "2026-11-12T13:25:45.408Z"
 }

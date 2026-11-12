@@ -5,7 +5,9 @@ import type { MoveRecord } from '../data/types'
 import type { Lang } from '../storage/types'
 import type { SearchItem } from '../ui/SearchOverlay'
 import { NO_REGULATION } from '../data/types'
+import { translate, type Key } from '../i18n'
 import { getLib } from './lib'
+import { NATURES } from './sets'
 
 const cache = new Map<string, SearchItem[]>()
 
@@ -99,4 +101,28 @@ export function moveItems(
 ): { items: SearchItem[]; reliable: boolean } {
   const pool = getLib().bridge.movesForSpecies(gen, speciesId, { regulation })
   return { items: entityItems(gen, 'moves', lang, pool.moveIds), reliable: pool.learnsetReliable }
+}
+
+/** The 25 natures (id = English name, as stored in sets), alphabetical in `lang`. */
+export function natureItems(lang: Lang): SearchItem[] {
+  const key = `natures:${lang}`
+  let out = cache.get(key)
+  if (!out) {
+    const stat = (k: string) => translate(lang, `stat.${k}` as Key)
+    out = Object.entries(NATURES)
+      .map(([id, pm]): SearchItem => {
+        const en = translate('en', `nature.${id}` as Key)
+        const n = names(en, translate('de', `nature.${id}` as Key), lang)
+        return {
+          id,
+          primary: n.primary,
+          ...(n.secondary ? { secondary: n.secondary } : {}),
+          ...(pm ? { detail: `+${stat(pm[0])} −${stat(pm[1])}` } : {}),
+          keys: n.keys,
+        }
+      })
+      .sort((a, c) => a.primary.localeCompare(c.primary, lang))
+    cache.set(key, out)
+  }
+  return out
 }

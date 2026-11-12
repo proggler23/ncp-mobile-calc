@@ -3,7 +3,7 @@
 Generated game data consumed by the app, plus a small typed loader.
 
 - `index.ts` - `loadGenData(gen)` (dex + learnsets, code-split per generation via `import.meta.glob`),
-  `loadSets(gen)` (common sets, separate chunk), `canLearn`, re-exports search helpers.
+  `loadSets(gen)` (common sets, separate chunk), `loadPopular(gen)` (`popular.json`: Smogon usage lists per regulation, champions + sv), `canLearn`, re-exports search helpers.
 - `normalize.ts` - `normalizeSearch`, `searchSpecies` / `searchMoves` / `searchItems` / `searchAbilities`.
 - `types.ts` - `GenId` (`rby gsc adv dpp bw xy sm lgpe swsh sv za champions`) and all record types.
 - `generated/<gen>/dex.json | learnsets.json | sets.json` (+ `regulations.json` for champions and sv:
