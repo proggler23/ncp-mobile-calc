@@ -21,6 +21,7 @@ import { emptySpread } from '../storage/types'
 import { commonSetToSet } from './convert'
 import { genMeta } from './gens'
 import type { DataGenId, PresetId, SavedSetLike } from './types'
+import { own } from '../own'
 
 type StatKey = keyof StatSpread
 
@@ -81,7 +82,7 @@ export async function loadCommonSets(
   speciesId: string,
 ): Promise<CommonSet[] | undefined> {
   const sets = await loadSets(gen)
-  return sets[speciesId]
+  return own(sets, speciesId)
 }
 
 /** `applyPreset` that loads the common sets itself for 'common'. */

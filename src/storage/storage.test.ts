@@ -5,7 +5,7 @@ import { createLocalStorageBackend, openBackend } from './backend'
 import type { Backend } from './backend'
 import { createRepository, StorageError } from './repository'
 import type { Repository } from './repository'
-import { parseSavedSet, parseTeam } from './schema'
+import { parseMatchup, parseSavedSet, parseTeam } from './schema'
 import { emptySpread, LIMITS } from './types'
 import type { SavedSet, SetBody } from './types'
 
@@ -192,5 +192,129 @@ describe('schema guards', () => {
     expect(parseSavedSet(member({ notes: 'x'.repeat(5000) }))).toBeUndefined()
     expect(parseSavedSet({ ...member(), gen: 'gen99' })).toBeUndefined()
     expect(parseTeam(null)).toBeUndefined()
+  })
+})
+
+describe('generation-aware investment limits (LGPE Awakening Values)', () => {
+  const av3 = { ...emptySpread(0), hp: 200, atk: 200, spe: 200 }
+
+  it('accepts three stats at 200 AV in gen 7.5 but not as EVs elsewhere', () => {
+    expect(parseSavedSet(member({ gen: 'lgpe', evs: av3 }))).toBeDefined()
+    expect(parseSavedSet(member({ gen: 'lgpe', evs: emptySpread(200) }))).toBeDefined()
+    expect(
+      parseSavedSet(member({ gen: 'lgpe', evs: { ...emptySpread(0), hp: 201 } })),
+    ).toBeUndefined()
+    expect(parseSavedSet(member({ gen: 'sv', evs: av3 }))).toBeUndefined()
+    expect(
+      parseSavedSet(member({ gen: 'sv', evs: { ...emptySpread(0), hp: 252, atk: 252, def: 8 } })),
+    ).toBeUndefined()
+    expect(
+      parseSavedSet(member({ gen: 'sv', evs: { ...emptySpread(0), hp: 252, atk: 252, def: 6 } })),
+    ).toBeDefined()
+  })
+
+  it('saves LGPE team members and custom sets', async () => {
+    localStorage.clear()
+    globalThis.indexedDB = new IDBFactory()
+    const repo = createRepository(await openBackend({ dbName: `t-${Math.random()}` }))
+    const m = member({ gen: 'lgpe', speciesId: 'pikachu', evs: av3, moveIds: [] })
+    const t = await repo.createTeam({ name: 'LGPE', gen: 'lgpe', members: [m] })
+    expect((await repo.getTeam(t.uid))?.members[0]?.evs).toEqual(av3)
+    const cs = await repo.createCustomSet({
+      name: 'AV',
+      gen: 'lgpe',
+      speciesId: 'pikachu',
+      set: bodyOf(m),
+    })
+    expect(cs.set.evs).toEqual(av3)
+    await expect(
+      repo.createCustomSet({ name: 'EV', gen: 'sv', speciesId: 'pikachu', set: bodyOf(m) }),
+    ).rejects.toMatchObject({ code: 'invalid' })
+  })
+
+  it('round-trips a gen 7.5 matchup', async () => {
+    localStorage.clear()
+    globalThis.indexedDB = new IDBFactory()
+    const repo = createRepository(await openBackend({ dbName: `t-${Math.random()}` }))
+    const side = { speciesId: 'pikachu', moveIds: [], evs: av3 }
+    await repo.setMatchup('lgpe', { mine: side, opp: side, savedAt: 1 })
+    expect((await repo.getMatchup('lgpe'))?.mine?.evs).toEqual(av3)
+    await expect(repo.setMatchup('sv', { mine: side, savedAt: 1 })).rejects.toBeInstanceOf(
+      StorageError,
+    )
+  })
+
+  it('caps the team index at the last slot', () => {
+    expect(
+      parseMatchup({ teamUid: 'x', mineTeamIndex: LIMITS.maxMembers - 1, savedAt: 1 }),
+    ).toBeDefined()
+    expect(
+      parseMatchup({ teamUid: 'x', mineTeamIndex: LIMITS.maxMembers, savedAt: 1 }),
+    ).toBeUndefined()
+  })
+})
+
+describe('untrusted ids and natures', () => {
+  it('only accepts canonical natures', () => {
+    expect(parseSavedSet(member({ nature: 'Adamant' }))).toBeDefined()
+    for (const nature of [
+      'constructor',
+      '__proto__',
+      'toString',
+      'adamant',
+      'Adamant ',
+      'Fröhlich',
+    ]) {
+      expect(parseSavedSet(member({ nature }))).toBeUndefined()
+    }
+  })
+
+  it('only accepts lowercase alphanumeric dex ids', () => {
+    expect(parseSavedSet(member({ abilityId: '__proto__' }))).toBeUndefined()
+    expect(parseSavedSet(member({ itemId: 'toString' }))).toBeUndefined()
+    expect(parseSavedSet(member({ moveIds: ['Fake Out'] }))).toBeUndefined()
+    expect(parseSavedSet(member({ speciesId: 'a'.repeat(LIMITS.maxIdLength + 1) }))).toBeUndefined()
+    expect(parseSavedSet(member({ abilityId: 'intimidate', itemId: 'sitrusberry' }))).toBeDefined()
+  })
+
+  it('drops tampered entries of an imported backup', async () => {
+    localStorage.clear()
+    globalThis.indexedDB = new IDBFactory()
+    const repo = createRepository(await openBackend({ dbName: `t-${Math.random()}` }))
+    const good = member()
+    const file = {
+      app: 'ncp-mobile-calc',
+      version: 1,
+      teams: [
+        { uid: 't1', name: 'ok', gen: 'sv', members: [good], createdAt: 1, updatedAt: 1 },
+        {
+          uid: 't2',
+          name: 'a',
+          gen: 'sv',
+          members: [{ ...good, nature: 'constructor' }],
+          createdAt: 1,
+          updatedAt: 1,
+        },
+        {
+          uid: 't3',
+          name: 'b',
+          gen: 'sv',
+          members: [{ ...good, abilityId: '__proto__' }],
+          createdAt: 1,
+          updatedAt: 1,
+        },
+        {
+          uid: 't4',
+          name: 'c',
+          gen: 'sv',
+          members: [{ ...good, itemId: 'toString' }],
+          createdAt: 1,
+          updatedAt: 1,
+        },
+      ],
+      customSets: [],
+    }
+    const res = await repo.importBackup(JSON.stringify(file))
+    expect(res).toMatchObject({ teams: 1, skipped: 3 })
   })
 })

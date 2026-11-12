@@ -1,9 +1,11 @@
 /** Pure helpers on `SavedSetLike` builds (need the bridge of the generation to be loaded). */
 import type { BridgeGenMeta } from '../bridge/gens'
 import type { DataGenId, MoveOverride, SavedSetLike } from '../bridge/types'
+import type { FinalStats } from '../engine/types'
 import type { SpeciesRecord, StatTuple } from '../data/types'
-import { emptySpread, type StatKey, type StatSpread } from '../storage/types'
+import { LIMITS, emptySpread, type StatKey, type StatSpread } from '../storage/types'
 import { getLib } from './lib'
+import { own } from '../own'
 
 export const STAT_ORDER: readonly StatKey[] = ['hp', 'atk', 'def', 'spa', 'spd', 'spe']
 
@@ -114,17 +116,30 @@ export function sanitizeSet(
   }
   if (meta.engineGen < 3) next.nature = 'Serious'
 
-  if (from.usesStatPoints !== meta.usesStatPoints) {
+  // Investment is not comparable across systems, so it is reset (the nature is kept):
+  //  - Champions Stat Points <-> EVs: both start from 0.
+  //  - Let's Go Awakening Values <-> EVs: an AV is not an EV (no /4, no 510 cap), so EVs/AVs are
+  //    reset instead of being reinterpreted. The AV cap (200) is enforced for same-system builds.
+  //  - Leaving gen 1-2: DVs are stored as IV = 2 * DV; they would otherwise become odd low IVs,
+  //    so the IVs go back to 31.
+  const awakening = meta.engineGen === 7.5
+  if (
+    from.usesStatPoints !== meta.usesStatPoints ||
+    (from.engineGen === 7.5) !== awakening ||
+    meta.engineGen <= 2
+  ) {
     next.evs = emptySpread(0)
+  }
+  if (from.usesStatPoints !== meta.usesStatPoints) {
     if (meta.usesStatPoints) next.statPoints = emptySpread(0)
     else delete next.statPoints
   }
-  if (meta.engineGen === 7.5) {
+  if (from.engineGen <= 2 && meta.engineGen > 2) next.ivs = emptySpread(31)
+  if (awakening) {
     next.evs = Object.fromEntries(
-      Object.entries(next.evs ?? {}).map(([k, v]) => [k, Math.min(200, v)]),
+      Object.entries(next.evs ?? {}).map(([k, v]) => [k, Math.min(LIMITS.maxAv, v)]),
     ) as StatSpread
   }
-  if (meta.engineGen <= 2) next.evs = emptySpread(0)
   return next
 }
 
@@ -219,7 +234,24 @@ export const NATURES: Record<string, [StatKey, StatKey] | undefined> = {
   Quirky: undefined,
 }
 
-/** Final stats like NCP's calcHP/calcStat of the generation (stat_data.js). */
+/**
+ * Final stats as computed by the engine itself (Hidden Power IV rewriting, Dynamax HP, gen 1-2
+ * rounding included). `undefined` while the engine of the generation is not loaded.
+ */
+export function engineStats(gen: DataGenId, set: SavedSetLike): FinalStats | undefined {
+  try {
+    const { bridge, engine } = getLib()
+    const { input } = bridge.toEngineInputDetailed(gen, set, {
+      speciesId: set.speciesId,
+      moveIds: [],
+    })
+    return engine.calculate(input).attackerStats
+  } catch {
+    return undefined
+  }
+}
+
+/** Fallback estimate of the final stats like NCP's calcHP/calcStat of the generation (stat_data.js). */
 export function computeStats(
   meta: BridgeGenMeta,
   base: StatTuple,
@@ -239,7 +271,7 @@ export function computeStats(
     spe: bspe,
   }
   const out = {} as Record<StatKey, number>
-  const nat = g >= 3 ? NATURES[set.nature ?? 'Serious'] : undefined
+  const nat = g >= 3 ? own(NATURES, set.nature ?? 'Serious') : undefined
   const natMod = (s: StatKey) => (nat?.[0] === s ? 1.1 : nat?.[1] === s ? 0.9 : 1)
 
   if (g <= 2) {

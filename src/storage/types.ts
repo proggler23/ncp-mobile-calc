@@ -6,6 +6,35 @@ export const STAT_KEYS = ['hp', 'atk', 'def', 'spa', 'spd', 'spe'] as const
 export type StatKey = (typeof STAT_KEYS)[number]
 export type StatSpread = Record<StatKey, number>
 
+/** The 25 canonical (English) nature names; the only values the schema accepts. */
+export const NATURE_NAMES = [
+  'Hardy',
+  'Lonely',
+  'Brave',
+  'Adamant',
+  'Naughty',
+  'Bold',
+  'Docile',
+  'Relaxed',
+  'Impish',
+  'Lax',
+  'Timid',
+  'Hasty',
+  'Serious',
+  'Jolly',
+  'Naive',
+  'Modest',
+  'Mild',
+  'Quiet',
+  'Bashful',
+  'Rash',
+  'Calm',
+  'Gentle',
+  'Sassy',
+  'Careful',
+  'Quirky',
+] as const
+
 export type Gender = 'M' | 'F'
 export type Format = 'singles' | 'doubles'
 
@@ -23,6 +52,8 @@ export const LIMITS = {
   maxBackupBytes: 5 * 1024 * 1024,
   maxEv: 252,
   maxEvTotal: 510,
+  /** Let's Go (gen 7.5) Awakening Values: <= 200 per stat, no total cap. */
+  maxAv: 200,
   maxStatPoint: 32,
   maxStatPointTotal: 66,
 } as const

@@ -60,6 +60,10 @@ export interface AppState {
   direction: Direction
   calc?: CalcState
   calcError?: string
+  /** Which side's Pokemon was set / changed most recently (decides auto weather/terrain ties). */
+  lastChanged: Side
+  /** Persisting the matchup failed (shown once, until dismissed). */
+  storageNotice?: boolean
 }
 
 const initialState = (): AppState => ({
@@ -74,6 +78,7 @@ const initialState = (): AppState => ({
   oppHasCommon: false,
   field: emptyField(),
   direction: 'forward',
+  lastChanged: 'opp',
 })
 
 export const store = createStore<AppState>(initialState())
@@ -89,6 +94,7 @@ export function resetStore(): void {
   pending = undefined
   seen = undefined
   tokens.mine = tokens.opp = tokens.gen = tokens.common = 0
+  persistWarned = false
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -106,6 +112,7 @@ function computeCalc(s: AppState): Pick<AppState, 'calc' | 'calcError'> {
       s.mine,
       s.opp,
       toFieldInput(s.field, s.format),
+      { abilityPriority: s.lastChanged === 'mine' ? 'attacker' : 'defender' },
     )
     return { calc: { result: engine.calculate(input), input, warnings }, calcError: undefined }
   } catch (e) {
@@ -252,6 +259,8 @@ export async function setGen(gen: DataGenId): Promise<void> {
   if (token !== tokens.gen) return
   const mine = prev.mine && sanitizeSet(from, gen, prev.mine)
   const opp = prev.opp && sanitizeSet(from, gen, prev.opp)
+  ++tokens.mine
+  ++tokens.opp
   commit({
     status: 'ready',
     error: undefined,
@@ -290,6 +299,7 @@ let persistTimer: ReturnType<typeof setTimeout> | undefined
 let pending: { gen: DataGenId; value: StoredMatchup } | undefined
 let seen: string | undefined
 let seenRefs: unknown[] = []
+let persistWarned = false
 
 function snapshotKey(s: AppState): string {
   seenRefs = [s.gen, s.mine, s.opp, s.field, s.oppPreset, s.mineTeamIndex, s.team?.uid]
@@ -322,9 +332,19 @@ export async function flushMatchup(): Promise<void> {
   if (!p) return
   try {
     await (await getRepository()).setMatchup(p.gen, p.value)
-  } catch {
-    /* storage unavailable or full: the matchup just is not restored next time */
+  } catch (e) {
+    // Storage unavailable / full / rejected: the matchup just is not restored next time. Tell the
+    // developer always and the user once.
+    console.warn('Could not save the matchup', e)
+    if (!persistWarned) {
+      persistWarned = true
+      store.set({ storageNotice: true })
+    }
   }
+}
+
+export function dismissStorageNotice(): void {
+  store.set({ storageNotice: undefined })
 }
 
 store.subscribe(() => {
@@ -446,9 +466,14 @@ export async function pickSpecies(side: Side, speciesId: string): Promise<void> 
   const set = common ?? bridge.applyPreset(gen, blank, 'neutral')
   if (side === 'opp') {
     ++tokens.common
-    commit({ opp: set, oppPreset: common ? 'common' : 'neutral', oppHasCommon: !!sets?.length })
+    commit({
+      opp: set,
+      oppPreset: common ? 'common' : 'neutral',
+      oppHasCommon: !!sets?.length,
+      lastChanged: 'opp',
+    })
   } else {
-    commit({ mine: set, mineTeamIndex: undefined })
+    commit({ mine: set, mineTeamIndex: undefined, lastChanged: 'mine' })
   }
 }
 
@@ -457,7 +482,8 @@ export function selectTeamMember(index: number): void {
   const member = team?.members[index]
   if (!team || !member || team.gen !== gen) return
   if (!getLib().bridge.getBridge(gen).kinds.species.byId.has(member.speciesId)) return
-  commit({ mine: savedToSet(member), mineTeamIndex: index })
+  ++tokens.mine
+  commit({ mine: savedToSet(member), mineTeamIndex: index, lastChanged: 'mine' })
 }
 
 export function savedToSet(m: SavedSet): SavedSetLike {
@@ -471,17 +497,24 @@ export function savedToSet(m: SavedSet): SavedSetLike {
 export function applyCustomSet(cs: CustomSet): void {
   const cur = store.get()
   if (cs.gen !== cur.gen) return
-  commit({ opp: { speciesId: cs.speciesId, ...structuredClone(cs.set) }, oppPreset: null })
+  ++tokens.opp
+  commit({
+    opp: { speciesId: cs.speciesId, ...structuredClone(cs.set) },
+    oppPreset: null,
+    lastChanged: 'opp',
+  })
+  void refreshCommon()
 }
 
 export async function applyOppPreset(preset: PresetId): Promise<void> {
   const { gen, opp } = store.get()
   if (!opp) return
-  const speciesId = opp.speciesId
+  const token = ++tokens.opp
   const next = await getLib().bridge.applyPresetAsync(gen, opp, preset)
   const cur = store.get()
-  if (!next || cur.opp?.speciesId !== speciesId || cur.gen !== gen) return
-  commit({ opp: next, oppPreset: preset })
+  // Discard when anything wrote the opponent meanwhile (species change, edit, swap, ...).
+  if (!next || token !== tokens.opp || cur.opp !== opp || cur.gen !== gen) return
+  commit({ opp: next, oppPreset: preset, lastChanged: 'opp' })
 }
 
 /** Edit one side's build (used by the editor sheet). */
@@ -489,12 +522,19 @@ export function updateSet(side: Side, fn: (s: SavedSetLike) => SavedSetLike): vo
   const cur = store.get()[side]
   if (!cur) return
   const next = fn(cur)
+  ++tokens[side]
+  const abilityChanged =
+    next.speciesId !== cur.speciesId ||
+    next.abilityId !== cur.abilityId ||
+    next.abilityOn !== cur.abilityOn
+  const last = abilityChanged ? { lastChanged: side } : {}
   if (side === 'opp') {
-    commit({ opp: next, oppPreset: null })
+    commit({ opp: next, oppPreset: null, ...last })
     if (next.speciesId !== cur.speciesId) void refreshCommon()
   } else {
     commit({
       mine: next,
+      ...last,
       ...(next.speciesId !== cur.speciesId ? { mineTeamIndex: undefined } : {}),
     })
   }
@@ -508,11 +548,15 @@ export function setSpecies(side: Side, speciesId: string): void {
 /** Exchange the two Pokemon (and the field effects that belong to their sides). */
 export function swapSides(): void {
   const s = store.get()
+  ++tokens.mine
+  ++tokens.opp
   commit({
     mine: s.opp,
     opp: s.mine,
     mineTeamIndex: undefined,
     oppPreset: null,
+    // The same physical Pokemon keeps its priority for the auto weather / terrain.
+    lastChanged: s.lastChanged === 'mine' ? 'opp' : 'mine',
     field: { ...s.field, mine: s.field.opp, opp: s.field.mine },
   })
   void refreshCommon()
@@ -554,6 +598,8 @@ export function setDirection(direction: Direction): void {
 
 /** Replace both builds at once (deep links, tests, Phase 5b "load matchup"). */
 export function setMatchup(mine: SavedSetLike | undefined, opp: SavedSetLike | undefined): void {
-  commit({ mine, opp, mineTeamIndex: undefined, oppPreset: null })
+  ++tokens.mine
+  ++tokens.opp
+  commit({ mine, opp, mineTeamIndex: undefined, oppPreset: null, lastChanged: 'opp' })
   void refreshCommon()
 }

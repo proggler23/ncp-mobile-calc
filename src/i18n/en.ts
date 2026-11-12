@@ -251,11 +251,14 @@ export const en = {
   'err.storage': 'Storage is not available. Your changes were not saved.',
   'gen.offline':
     'Generation {gen} is not downloaded yet and you are offline. Connect once to download it; afterwards it works offline.',
+  'gen.redownloadHint':
+    'If you saved generations for offline use before an app update, re-download them once when online (Menu, Offline use).',
   'gen.failed': 'Could not load generation {gen}.',
   'top.menu': 'Menu',
   'team.switcher': 'Active team',
   'team.manage': 'Manage teams',
   'team.noneActive': 'No team selected',
+  'team.defaultName': 'Team',
   'team.optionOtherGen': '{name} ({gen})',
   'teams.title': 'Teams',
   'teams.back': 'Back to calculator',

@@ -1,7 +1,15 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
 import { GEN_DATA_IDS, GEN_META } from './bridge/gens'
 import type { DataGenId } from './bridge/types'
-import { dismissGenNotice, flushMatchup, initApp, setFormat, setGen } from './state/app'
+import {
+  dismissGenNotice,
+  dismissStorageNotice,
+  flushMatchup,
+  initApp,
+  setFormat,
+  setGen,
+} from './state/app'
+import { refreshStaleDownloads } from './pwa'
 import { useApp, useT } from './state/hooks'
 import { useRoute } from './state/route'
 import { Segmented } from './ui/controls'
@@ -87,9 +95,14 @@ export default function App() {
   const error = useApp((s) => s.error)
   const route = useRoute()
   const genNotice = useApp((s) => s.genNotice)
+  const storageNotice = useApp((s) => s.storageNotice)
 
   useEffect(() => {
-    void initApp()
+    void initApp().then(async () => {
+      // After an app update, re-download the generations the user had saved for offline use.
+      const { prefetchGen } = await import('./bridge/maps')
+      await refreshStaleDownloads(GEN_DATA_IDS, (g) => prefetchGen(g as DataGenId))
+    })
     void loadMatchup() // start fetching the screen chunk while settings/data load
     return () => void flushMatchup()
   }, [])
@@ -107,8 +120,17 @@ export default function App() {
               {t(genNotice.offline ? 'gen.offline' : 'gen.failed', {
                 gen: GEN_META[genNotice.gen].label,
               })}
+              {genNotice.offline && ` ${t('gen.redownloadHint')}`}
             </p>
             <button type="button" className="btn" onClick={dismissGenNotice}>
+              {t('common.dismiss')}
+            </button>
+          </div>
+        )}
+        {storageNotice && (
+          <div className="notice" role="status">
+            <p>{t('err.storage')}</p>
+            <button type="button" className="btn" onClick={dismissStorageNotice}>
               {t('common.dismiss')}
             </button>
           </div>
