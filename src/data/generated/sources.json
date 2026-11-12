@@ -1,0 +1,265 @@
+{
+  "generatedBy": "scripts/build-data (npm run build:data)",
+  "packages": {
+    "@pkmn/dex": "0.11.0",
+    "@pkmn/data": "0.11.0",
+    "pokemon-showdown": "0.11.11",
+    "requested": "latest"
+  },
+  "germanNames": {
+    "source": "PokeAPI/pokeapi data/v2/csv (pokemon_species_names, move_names, ability_names, item_names)",
+    "url": "https://github.com/PokeAPI/pokeapi/tree/master/data/v2/csv",
+    "license": "PokeAPI data: BSD-3-Clause",
+    "note": "Names are Nintendo/Game Freak property; used only as display labels."
+  },
+  "usageStats": {
+    "source": "Smogon usage statistics (chaos JSON): https://www.smogon.com/stats/",
+    "note": "Only aggregated usage numbers are used (spreads, items, abilities, moves, tera). No Smogon prose or analysis text is stored."
+  },
+  "entityData": "Pokemon Showdown data (MIT) via @pkmn/dex and the pokemon-showdown npm package",
+  "gens": {
+    "rby": {
+      "entitySource": "@pkmn/dex + @pkmn/data Generations gen1",
+      "vgcFormats": [],
+      "gaps": [
+        "No VGC usage statistics exist on smogon.com/stats for this generation.",
+        "No Doubles/VGC format existed; sets are empty."
+      ]
+    },
+    "gsc": {
+      "entitySource": "@pkmn/dex + @pkmn/data Generations gen2",
+      "vgcFormats": [],
+      "gaps": [
+        "No VGC usage statistics exist on smogon.com/stats for this generation."
+      ]
+    },
+    "adv": {
+      "entitySource": "@pkmn/dex + @pkmn/data Generations gen3",
+      "vgcFormats": [],
+      "gaps": [
+        "No VGC usage statistics exist on smogon.com/stats for this generation."
+      ]
+    },
+    "dpp": {
+      "entitySource": "@pkmn/dex + @pkmn/data Generations gen4",
+      "vgcFormats": [
+        {
+          "format": "gen4vgc2010",
+          "month": "2026-06",
+          "cutoff": 1760,
+          "battles": 2427,
+          "url": "https://www.smogon.com/stats/2026-06/chaos/gen4vgc2010-1760.json"
+        },
+        {
+          "format": "gen4vgc2009",
+          "month": "2026-03",
+          "cutoff": 1760,
+          "battles": 4730,
+          "url": "https://www.smogon.com/stats/2026-03/chaos/gen4vgc2009-1760.json"
+        }
+      ],
+      "gaps": [
+        "Gen 4 VGC stats only exist as low-volume recent ladder months (the original 2009-2010 ladders were not archived); sets are sparse."
+      ]
+    },
+    "bw": {
+      "entitySource": "@pkmn/dex + @pkmn/data Generations gen5",
+      "vgcFormats": [
+        {
+          "format": "gen5vgc2013",
+          "month": "2025-10",
+          "cutoff": 1760,
+          "battles": 5925,
+          "url": "https://www.smogon.com/stats/2025-10/chaos/gen5vgc2013-1760.json"
+        },
+        {
+          "format": "gen5vgc2011",
+          "month": "2025-04",
+          "cutoff": 1760,
+          "battles": 1744,
+          "url": "https://www.smogon.com/stats/2025-04/chaos/gen5vgc2011-1760.json"
+        }
+      ],
+      "gaps": [
+        "Gen 5 VGC stats only exist as low-volume recent ladder months; sets are sparse."
+      ]
+    },
+    "xy": {
+      "entitySource": "@pkmn/dex + @pkmn/data Generations gen6",
+      "vgcFormats": [
+        {
+          "format": "vgc2016",
+          "month": "2016-04",
+          "cutoff": 1760,
+          "battles": 382225,
+          "url": "https://www.smogon.com/stats/2016-04/chaos/vgc2016-1760.json"
+        },
+        {
+          "format": "vgc2015",
+          "month": "2015-04",
+          "cutoff": 1760,
+          "battles": 413029,
+          "url": "https://www.smogon.com/stats/2015-04/chaos/vgc2015-1760.json"
+        },
+        {
+          "format": "vgc2014",
+          "month": "2014-12",
+          "cutoff": 1760,
+          "battles": 49294,
+          "url": "https://www.smogon.com/stats/2014-12/chaos/vgc2014-1760.json"
+        }
+      ],
+      "gaps": [
+        "Showdown gen6 data is the ORAS ruleset; XY-only differences (gen6xy mod) are not applied."
+      ]
+    },
+    "sm": {
+      "entitySource": "@pkmn/dex + @pkmn/data Generations gen7",
+      "vgcFormats": [
+        {
+          "format": "gen7vgc2019ultraseries",
+          "month": "2019-03",
+          "cutoff": 1760,
+          "battles": 277585,
+          "url": "https://www.smogon.com/stats/2019-03/chaos/gen7vgc2019ultraseries-1760.json"
+        },
+        {
+          "format": "gen7vgc2018",
+          "month": "2018-04",
+          "cutoff": 1760,
+          "battles": 484396,
+          "url": "https://www.smogon.com/stats/2018-04/chaos/gen7vgc2018-1760.json"
+        },
+        {
+          "format": "gen7vgc2017",
+          "month": "2017-04",
+          "cutoff": 1760,
+          "battles": 545064,
+          "url": "https://www.smogon.com/stats/2017-04/chaos/gen7vgc2017-1760.json"
+        }
+      ],
+      "gaps": [
+        "Showdown gen7 data is the USUM ruleset (gen7sm mod not applied)."
+      ]
+    },
+    "lgpe": {
+      "entitySource": "pokemon-showdown npm mod \"gen7letsgo\"",
+      "vgcFormats": [],
+      "gaps": [
+        "No VGC usage statistics exist on smogon.com/stats for this generation.",
+        "Species/learnsets come from the pokemon-showdown 'gen7letsgo' mod (Kanto 151 + Meltan/Melmetal + Alolan forms + Megas). No abilities exist in LGPE ('No Ability' only).",
+        "Items and moves are inherited from the gen7 pool by the Showdown mod; moves are pruned to those in some learnset, items are not pruned (TODO: restrict to LGPE's actual item list)."
+      ]
+    },
+    "swsh": {
+      "entitySource": "@pkmn/dex + @pkmn/data Generations gen8",
+      "vgcFormats": [
+        {
+          "format": "gen8vgc2022",
+          "month": "2022-05",
+          "cutoff": 1760,
+          "battles": 1048455,
+          "url": "https://www.smogon.com/stats/2022-05/chaos/gen8vgc2022-1760.json"
+        },
+        {
+          "format": "gen8vgc2021series11",
+          "month": "2021-12",
+          "cutoff": 1760,
+          "battles": 444432,
+          "url": "https://www.smogon.com/stats/2021-12/chaos/gen8vgc2021series11-1760.json"
+        },
+        {
+          "format": "gen8vgc2020",
+          "month": "2020-03",
+          "cutoff": 1760,
+          "battles": 1241124,
+          "url": "https://www.smogon.com/stats/2020-03/chaos/gen8vgc2020-1760.json"
+        }
+      ],
+      "gaps": []
+    },
+    "sv": {
+      "entitySource": "@pkmn/dex + @pkmn/data Generations gen9",
+      "vgcFormats": [
+        {
+          "format": "gen9vgc2026regi",
+          "month": "2026-05",
+          "cutoff": 1760,
+          "battles": 236315,
+          "url": "https://www.smogon.com/stats/2026-05/chaos/gen9vgc2026regi-1760.json"
+        },
+        {
+          "format": "gen9vgc2026regf",
+          "month": "2026-03",
+          "cutoff": 1760,
+          "battles": 755266,
+          "url": "https://www.smogon.com/stats/2026-03/chaos/gen9vgc2026regf-1760.json"
+        },
+        {
+          "format": "gen9vgc2025regj",
+          "month": "2025-11",
+          "cutoff": 1760,
+          "battles": 206735,
+          "url": "https://www.smogon.com/stats/2025-11/chaos/gen9vgc2025regj-1760.json"
+        },
+        {
+          "format": "gen9vgc2025regh",
+          "month": "2025-10",
+          "cutoff": 1760,
+          "battles": 650994,
+          "url": "https://www.smogon.com/stats/2025-10/chaos/gen9vgc2025regh-1760.json"
+        },
+        {
+          "format": "gen9vgc2024regg",
+          "month": "2024-06",
+          "cutoff": 1760,
+          "battles": 966806,
+          "url": "https://www.smogon.com/stats/2024-06/chaos/gen9vgc2024regg-1760.json"
+        }
+      ],
+      "gaps": [
+        "Data is the base Showdown gen9 ruleset (latest DLC); individual VGC regulations restrict the legal pool further."
+      ]
+    },
+    "za": {
+      "entitySource": "pokemon-showdown npm mod \"gen9legends\"",
+      "vgcFormats": [],
+      "gaps": [
+        "No VGC usage statistics exist on smogon.com/stats for this generation. (Legends Z-A has no competitive ladder format.)",
+        "Species list comes from the pokemon-showdown 'gen9legends' mod (isNonstandard filter). The mod inherits moves, items and abilities from gen9 (SV) and its learnsets still carry SV-era sources, so Z-A-specific movepools, new moves, Mega Stones and Z-A balance changes are NOT reflected.",
+        "TODO: replace with real Z-A data when Showdown/@pkmn ship it."
+      ]
+    },
+    "champions": {
+      "entitySource": "pokemon-showdown npm mod \"champions\"",
+      "vgcFormats": [
+        {
+          "format": "gen9championsvgc2026regmc",
+          "month": "2026-10",
+          "cutoff": 1760,
+          "battles": 1649648,
+          "url": "https://www.smogon.com/stats/2026-10/chaos/gen9championsvgc2026regmc-1760.json"
+        },
+        {
+          "format": "gen9championsvgc2026regmb",
+          "month": "2026-08",
+          "cutoff": 1760,
+          "battles": 1269250,
+          "url": "https://www.smogon.com/stats/2026-08/chaos/gen9championsvgc2026regmb-1760.json"
+        },
+        {
+          "format": "gen9championsvgc2026regma",
+          "month": "2026-05",
+          "cutoff": 1760,
+          "battles": 3355619,
+          "url": "https://www.smogon.com/stats/2026-05/chaos/gen9championsvgc2026regma-1760.json"
+        }
+      ],
+      "gaps": [
+        "Source is the pokemon-showdown 'champions' mod (legal dex = isNonstandard null, Megas included, 20 PP cap, Mega Stones in items).",
+        "Champions uses Stat Points instead of EVs: each point adds +1 to the stat (HP +1 too), 66 points total, max 32 per stat, IVs fixed at 31. In this data the \"evs\" fields of sets hold Stat Points. Verify limits against the Showdown validator when it lands (stat formula is stat + SP + 20; HP +75).",
+        "Regulation-specific legal pools (Reg M-A/M-B/M-C) are not separated; the base 'champions' mod is used."
+      ]
+    }
+  }
+}
