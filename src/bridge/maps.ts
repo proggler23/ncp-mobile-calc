@@ -17,7 +17,10 @@ import {
   type MapEntry,
 } from './types'
 
-const mapLoaders = import.meta.glob<{ default: BridgeMapFile }>('./generated/*.json')
+const mapLoaders = import.meta.glob<{ default: BridgeMapFile }>([
+  './generated/*.json',
+  '!./generated/coverage.json',
+])
 
 export const ENTITY_KINDS: readonly EntityKind[] = ['species', 'moves', 'items', 'abilities']
 
