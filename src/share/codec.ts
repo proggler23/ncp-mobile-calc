@@ -1,12 +1,14 @@
 /**
- * Share-link codec (pure: no DOM, no app state). A shared calc is a compact positional JSON array,
- * deflate-raw compressed when the platform can, then base64url, behind a version tag:
+ * Share-link codec (pure: no DOM, no app state). Tokens:
  *
- *   v1.<base64url>    deflate-raw compressed
- *   v1r.<base64url>   not compressed (platform without CompressionStream)
+ *   2<base64url>      v2 (current): bit-packed binary with numeric ids (see ./v2.ts), deflate-raw
+ *                     only when that is shorter. Link: `#c2<base64url>`.
+ *   v1.<base64url>    v1: positional JSON, deflate-raw compressed. Link: `#/c/v1.<...>`.
+ *   v1r.<base64url>   v1 not compressed (platform without CompressionStream)
  *
- * Old links must keep decoding: never change what a version tag means, add a new decoder to
- * `DECODERS` and let `encodeShare` write the new tag.
+ * Old links must keep decoding: never change what a version tag means, add a new decoder and let
+ * `encodeShare` write the new tag. v2 decodes to the v1 positional wire value below, so both share
+ * one validation path.
  *
  * v1 wire format (trailing `null`s trimmed, defaults omitted):
  *   [gen, regulation|0, "s"|"d", field|0, mine|0, opp|0, [direction "f"|"r", moveIndex]|0]
@@ -25,14 +27,20 @@ import { GEN_IDS } from '../data/types'
 import { own } from '../own'
 import { safeDetail } from './detail'
 import { emptyField, SIDE_OPTIONS, type UiField } from '../state/field'
+import { loadIdTables } from './ids'
 import { parseMatchupSet } from '../storage/schema'
+import { decodeV2, encodeV2, peekGen } from './v2'
 import { emptySpread, TYPE_NAMES, type Format, type StatSpread } from '../storage/types'
 
 export const SHARE_VERSION = 'v1'
 /** Longest token accepted (characters, version tag included). */
 export const MAX_TOKEN_LENGTH = 4096
+/** Longest v2 token accepted. */
+export const MAX_TOKEN_LENGTH_V2 = 2048
 /** Longest decompressed JSON accepted (a zip-bomb guard). */
 export const MAX_JSON_BYTES = 16 * 1024
+/** Longest decompressed v2 stream accepted (a real calc needs well under 200 bytes). */
+export const MAX_V2_BYTES = 2048
 
 export type Direction = 'forward' | 'reverse'
 
@@ -420,8 +428,30 @@ const DECODERS: Record<
 // Public API
 // ---------------------------------------------------------------------------------------------
 
-/** Serialize a payload to a link token (`v1.<base64url>`). Compresses when the platform can. */
+/** Serialize a payload to a v2 link token (`2<base64url>`). Compresses only when that is shorter. */
 export async function encodeShare(
+  payload: SharePayload,
+  opts: { compress?: boolean } = {},
+): Promise<string> {
+  const plain = encodeV2(payload, await loadIdTables(payload.gen))
+  let best = plain
+  if (opts.compress !== false && canCompress()) {
+    try {
+      const packed = await runStream(plain, new CompressionStream('deflate-raw'), MAX_V2_BYTES)
+      if (packed.length + 1 < plain.length) {
+        best = new Uint8Array(packed.length + 1)
+        best[0] = 0x80
+        best.set(packed, 1)
+      }
+    } catch {
+      /* keep the plain form */
+    }
+  }
+  return `2${toBase64Url(best)}`
+}
+
+/** Serialize a payload to a v1 link token (`v1.<base64url>`); kept for tests and tooling. */
+export async function encodeShareV1(
   payload: SharePayload,
   opts: { compress?: boolean } = {},
 ): Promise<string> {
@@ -437,11 +467,55 @@ export async function encodeShare(
   return `${SHARE_VERSION}r.${toBase64Url(bytes)}`
 }
 
+/** Finish a decoded wire value: shared by every version. */
+function finish(
+  wire: unknown,
+  decoder: (wire: unknown, warnings: ShareWarning[]) => SharePayload | undefined,
+  warnings: ShareWarning[],
+): DecodeResult {
+  const payload = decoder(wire, warnings)
+  if (!payload) return { ok: false, reason: 'data' }
+  if (!payload.mine && !payload.opp) return { ok: false, reason: 'data' }
+  if (payload.move && (!payload.mine || !payload.opp)) delete payload.move
+  return { ok: true, payload, warnings }
+}
+
+async function decodeBinary(data: string): Promise<DecodeResult> {
+  let bytes = fromBase64Url(data)
+  if (!bytes || bytes.length === 0) return { ok: false, reason: 'format' }
+  if (bytes[0]! & 0x80) {
+    if (typeof DecompressionStream === 'undefined') return { ok: false, reason: 'unsupported' }
+    try {
+      bytes = await runStream(
+        bytes.subarray(1),
+        new DecompressionStream('deflate-raw'),
+        MAX_V2_BYTES,
+      )
+    } catch {
+      return { ok: false, reason: 'format' }
+    }
+  }
+  const gen = peekGen(bytes)
+  if (!gen) return { ok: false, reason: 'data' }
+  const warnings: ShareWarning[] = []
+  try {
+    const wire = decodeV2(bytes, await loadIdTables(gen), warnings)
+    if (!wire) return { ok: false, reason: 'data' }
+    return finish(wire, decodeV1, warnings)
+  } catch {
+    return { ok: false, reason: 'format' } // truncated or malformed
+  }
+}
+
 /** Parse and validate a link token. Never throws. */
 export async function decodeShare(token: string): Promise<DecodeResult> {
   try {
     if (typeof token !== 'string' || token.length === 0) return { ok: false, reason: 'empty' }
     if (token.length > MAX_TOKEN_LENGTH) return { ok: false, reason: 'tooLong' }
+    if (token.startsWith('2')) {
+      if (token.length > MAX_TOKEN_LENGTH_V2) return { ok: false, reason: 'tooLong' }
+      return await decodeBinary(token.slice(1))
+    }
     const m = /^(v\d{1,3})(r?)\.([A-Za-z0-9_-]*)$/.exec(token)
     if (!m) return { ok: false, reason: 'format' }
     const decoder = own(DECODERS, m[1])
@@ -462,12 +536,7 @@ export async function decodeShare(token: string): Promise<DecodeResult> {
     } catch {
       return { ok: false, reason: 'format' }
     }
-    const warnings: ShareWarning[] = []
-    const payload = decoder(wire, warnings)
-    if (!payload) return { ok: false, reason: 'data' }
-    if (!payload.mine && !payload.opp) return { ok: false, reason: 'data' }
-    if (payload.move && (!payload.mine || !payload.opp)) delete payload.move
-    return { ok: true, payload, warnings }
+    return finish(wire, decoder, [])
   } catch {
     return { ok: false, reason: 'format' }
   }

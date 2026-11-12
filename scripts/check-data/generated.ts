@@ -11,6 +11,7 @@ import path from 'node:path'
 import { GEN_IDS } from '../../src/data/types'
 import { popularCountsOf, regulationCountsOf, validateGen, VersionSchema } from './schema'
 import { GENS } from '../build-data/config'
+import { shareIdErrors } from './share-ids'
 
 const ROOT = path.resolve(import.meta.dirname, '../..')
 const G = path.join(ROOT, 'src/data/generated')
@@ -58,6 +59,8 @@ else {
     errors.push(`version.json invalid: ${v.error.issues.map((i) => i.message).join('; ')}`)
 }
 
+errors.push(...shareIdErrors())
+
 // bridge up to date?
 const tmp = mkdtempSync(path.join(tmpdir(), 'bridge-check-'))
 try {
@@ -81,4 +84,6 @@ if (errors.length) {
   console.error(`check:generated FAILED\n- ${errors.join('\n- ')}`)
   process.exit(1)
 }
-console.log('check:generated OK (files present, schemas valid, bridge up to date)')
+console.log(
+  'check:generated OK (files present, schemas valid, bridge and share-id tables up to date)',
+)

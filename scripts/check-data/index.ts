@@ -31,6 +31,7 @@ import {
 import type { CheckResult, Coverage, CountMap, GateResult, Reason } from './gates'
 import { countsOf, popularCountsOf, regulationCountsOf, validateGen, VersionSchema } from './schema'
 import { GENS } from '../build-data/config'
+import { shareIdChanges, shareIdErrors } from './share-ids'
 import type { Files, RegulationCounts } from './schema'
 
 const ROOT = path.resolve(import.meta.dirname, '../..')
@@ -199,6 +200,22 @@ function main() {
   metrics.counts = cur
   metrics.regulationCounts = curReg
   metrics.popularCounts = curPop
+
+  // 2b. share-id tables: well formed and current; an id that changed its number breaks old links
+  const idErrors = shareIdErrors()
+  for (const e of idErrors) reasons.push({ level: 'fail', code: 'share-ids', message: e })
+  const idChanges = shareIdChanges(BASE)
+  for (const c of idChanges)
+    reasons.push({
+      level: 'anomaly',
+      code: 'share-ids-changed',
+      message: `share id mapping changed (old v2 links would break): ${c}`,
+    })
+  checks.push({
+    name: 'share-ids',
+    status: idErrors.length ? 'fail' : idChanges.length ? 'anomaly' : 'pass',
+    detail: `vs ${BASE}`,
+  })
 
   // 3. bridge coverage diff (the bridge build is offline and deterministic)
   if (!flag('--no-bridge')) {

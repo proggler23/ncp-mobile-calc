@@ -8,7 +8,7 @@ import { emptySpread } from '../storage/types'
 import {
   MAX_TOKEN_LENGTH,
   decodeShare,
-  encodeShare,
+  encodeShareV1,
   fromBase64Url,
   toBase64Url,
   toWire,
@@ -81,7 +81,7 @@ describe('codec round trip', () => {
     it(`${gen}: compressed and uncompressed links decode to the same payload`, async () => {
       const p = payload(gen)
       for (const compress of [true, false]) {
-        const token = await encodeShare(p, { compress })
+        const token = await encodeShareV1(p, { compress })
         expect(token).toMatch(compress ? /^v1\.[\w-]+$/ : /^v1r\.[\w-]+$/)
         const res = await decodeShare(token)
         if (!res.ok) throw new Error(`${gen}: ${res.reason}`)
@@ -107,17 +107,17 @@ describe('codec round trip', () => {
   }
 
   it('keeps Stat Points, AVs and DVs', async () => {
-    const champ = (await decodeShare(await encodeShare(payload('champions')))) as {
+    const champ = (await decodeShare(await encodeShareV1(payload('champions')))) as {
       ok: true
       payload: SharePayload
     }
     expect(champ.payload.mine?.statPoints).toEqual({ ...emptySpread(0), hp: 32, def: 2, spd: 32 })
-    const lgpe = (await decodeShare(await encodeShare(payload('lgpe')))) as {
+    const lgpe = (await decodeShare(await encodeShareV1(payload('lgpe')))) as {
       ok: true
       payload: SharePayload
     }
     expect(lgpe.payload.mine?.evs).toEqual({ ...emptySpread(0), hp: 200, atk: 100 })
-    const gsc = (await decodeShare(await encodeShare(payload('gsc')))) as {
+    const gsc = (await decodeShare(await encodeShareV1(payload('gsc')))) as {
       ok: true
       payload: SharePayload
     }
@@ -127,9 +127,9 @@ describe('codec round trip', () => {
   it('distinguishes "no weather" from "auto weather"', async () => {
     const p = payload('sv')
     p.field = { ...emptyField(), weather: '' }
-    const none = await decodeShare(await encodeShare(p))
+    const none = await decodeShare(await encodeShareV1(p))
     p.field = emptyField()
-    const auto = await decodeShare(await encodeShare(p))
+    const auto = await decodeShare(await encodeShareV1(p))
     expect(none.ok && none.payload.field.weather).toBe('')
     expect(auto.ok && auto.payload.field.weather).toBeUndefined()
   })
@@ -156,14 +156,14 @@ describe('compression fallback', () => {
   it('writes an uncompressed link without CompressionStream and reads it back', async () => {
     vi.stubGlobal('CompressionStream', undefined)
     vi.stubGlobal('DecompressionStream', undefined)
-    const token = await encodeShare(payload('sv'))
+    const token = await encodeShareV1(payload('sv'))
     expect(token.startsWith('v1r.')).toBe(true)
     const res = await decodeShare(token)
     expect(res.ok && res.payload.mine?.speciesId).toBe('incineroar')
   })
 
   it('reports a compressed link as unsupported when it cannot be decompressed', async () => {
-    const token = await encodeShare(payload('sv'))
+    const token = await encodeShareV1(payload('sv'))
     vi.stubGlobal('DecompressionStream', undefined)
     expect(await decodeShare(token)).toEqual({ ok: false, reason: 'unsupported' })
   })
@@ -210,15 +210,15 @@ describe('size', () => {
   it('a typical Champions doubles calc stays well under 600 characters', async () => {
     const p = payload('champions')
     p.field = { ...emptyField(), weather: 'Sun', mine: { tailwind: true } }
-    const token = await encodeShare(p)
+    const token = await encodeShareV1(p)
     const url = `https://proggler23.github.io/ncp-mobile-calc/#/c/${token}`
     console.info(`champions doubles: token ${token.length} chars, link ${url.length} chars`)
     expect(token.length).toBeLessThanOrEqual(600)
-    const plain = await encodeShare(p, { compress: false })
+    const plain = await encodeShareV1(p, { compress: false })
     console.info(`champions doubles uncompressed: ${plain.length} chars`)
     // Even the largest calc here (all boosts, overrides, field) fits.
     const big = payload('sv')
-    expect((await encodeShare(big)).length).toBeLessThanOrEqual(900)
+    expect((await encodeShareV1(big)).length).toBeLessThanOrEqual(900)
   })
 })
 
