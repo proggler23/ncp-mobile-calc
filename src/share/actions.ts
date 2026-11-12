@@ -28,18 +28,14 @@ export async function copyToClipboard(text: string): Promise<boolean> {
 }
 
 /**
- * Open the system share sheet with lines 1-2 as text and the link as url. Without Web Share (most
- * desktops) the whole message including the link is copied instead. Dismissing the share sheet
- * (AbortError) does nothing.
+ * Open the system share sheet with the whole message (calc line, context line, link as the last
+ * line) as `text` only. A separate `url` field is deliberately not sent: on Android, targets such
+ * as WhatsApp then drop the text and deliver just the link. Without Web Share (most desktops) the
+ * same message is copied instead. Dismissing the share sheet (AbortError) does nothing.
  */
-export async function shareMessage(msg: {
-  title: string
-  text: string
-  url: string
-  full: string
-}): Promise<ShareOutcome> {
+export async function shareMessage(msg: { full: string }): Promise<ShareOutcome> {
   if (typeof navigator.share === 'function') {
-    const data = { title: msg.title, text: msg.text, url: msg.url }
+    const data = { text: msg.full }
     try {
       if (!navigator.canShare || navigator.canShare(data)) {
         await navigator.share(data)
@@ -47,7 +43,7 @@ export async function shareMessage(msg: {
       }
     } catch (e) {
       if (e instanceof DOMException && e.name === 'AbortError') return 'aborted'
-      /* any other failure: fall back to the clipboard */
+      /* any other failure (e.g. NotAllowedError): fall back to the clipboard */
     }
   }
   return (await copyToClipboard(msg.full)) ? 'copied' : 'failed'

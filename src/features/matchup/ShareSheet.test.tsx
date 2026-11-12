@@ -50,7 +50,7 @@ describe('ShareSheet', () => {
     expect(screen.getByRole('button', { name: /Copy link/ })).toBeEnabled()
   })
 
-  it('uses navigator.share (lines 1-2 as text, the link as url) when available', async () => {
+  it('uses navigator.share with the whole message as text only (link last, no url)', async () => {
     const share = vi.fn().mockResolvedValue(undefined)
     const writeText = vi.fn()
     stub('share', share)
@@ -60,14 +60,26 @@ describe('ShareSheet', () => {
     await waitFor(() => expect(btn).toBeEnabled())
     fireEvent.click(btn)
     expect(share).toHaveBeenCalledTimes(1)
-    const arg = share.mock.calls[0]![0] as { title: string; text: string; url: string }
-    expect(arg.title).toBe('NCP Mobile Calc')
-    expect(arg.text.split('\n')).toHaveLength(2)
-    expect(arg.text).toContain('Flare Blitz')
-    expect(arg.url).toMatch(/#\/c\/v1\.[\w-]+$/)
-    expect(arg.text).not.toContain(arg.url)
+    const arg = share.mock.calls[0]![0] as Record<string, unknown>
+    expect(Object.keys(arg)).toEqual(['text'])
+    const lines = (arg.text as string).split('\n')
+    expect(lines).toHaveLength(3)
+    expect(lines[0]).toContain('Flare Blitz')
+    expect(lines[2]).toMatch(/^http\S+#\/c\/v1\.[\w-]+$/)
     expect(writeText).not.toHaveBeenCalled()
     expect(onClose).toHaveBeenCalled()
+  })
+
+  it('falls back to the clipboard when navigator.share throws a non-abort error', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    stub('share', vi.fn().mockRejectedValue(new DOMException('denied', 'NotAllowedError')))
+    stub('clipboard', { writeText })
+    open()
+    const btn = screen.getByRole('button', { name: /Share calc/ })
+    await waitFor(() => expect(btn).toBeEnabled())
+    fireEvent.click(btn)
+    expect(await screen.findByText('Copied')).toBeInTheDocument()
+    expect((writeText.mock.calls[0]![0] as string).split('\n')).toHaveLength(3)
   })
 
   it('does nothing (no toast, no copy) when the share sheet is dismissed', async () => {
