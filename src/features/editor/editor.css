@@ -1,0 +1,163 @@
+.editor {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.editor__section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.625rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.editor__section h3 {
+  font-size: 0.9375rem;
+}
+
+.editor__section h4 {
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+}
+
+.editor__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: 0.5rem;
+  align-items: end;
+}
+
+.picker {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  min-height: 48px;
+  padding: 0 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  text-align: left;
+  cursor: pointer;
+}
+
+.picker__label {
+  color: var(--muted);
+  font-size: 0.8125rem;
+  min-width: 4.5rem;
+}
+
+.picker__value {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.picker--add {
+  display: flex;
+  color: var(--accent);
+  font-weight: 600;
+  border-style: dashed;
+}
+
+.moveslot {
+  display: grid;
+  gap: 0.125rem;
+  padding: 0.25rem;
+  border-radius: var(--radius);
+  background: var(--surface-2);
+}
+
+.moveslot__head {
+  display: flex;
+  gap: 0.25rem;
+  align-items: center;
+}
+
+.moveslot__head .picker {
+  flex: 1;
+  min-width: 0;
+}
+
+.moveslot__opts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 1rem;
+}
+
+.counter {
+  padding: 0.375rem 0.625rem;
+  border-radius: var(--radius);
+  background: var(--info-bg);
+  font-weight: 700;
+  position: sticky;
+  top: -0.5rem;
+  z-index: 1;
+}
+
+.counter--over {
+  background: var(--bad-bg);
+}
+
+.statrow {
+  display: grid;
+  grid-template-columns: 3rem 1fr auto;
+  grid-template-areas: 'name slider final' 'step step quick';
+  align-items: center;
+  gap: 0.25rem 0.5rem;
+  padding: 0.25rem 0;
+  border-bottom: 1px dashed var(--border);
+}
+
+.statrow__name {
+  grid-area: name;
+  font-weight: 700;
+}
+
+.statrow__final {
+  grid-area: final;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  min-width: 2.5rem;
+  text-align: right;
+}
+
+.statrow__slider {
+  grid-area: slider;
+  width: 100%;
+  min-height: var(--tap);
+  accent-color: var(--accent);
+}
+
+.statrow__slider--wide {
+  width: 100%;
+}
+
+.statrow .stepper {
+  grid-area: step;
+}
+
+.statrow__quick {
+  grid-area: quick;
+  display: flex;
+  gap: 0.25rem;
+}
+
+.ivrow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.editor,
+.editor__section,
+.editor__section > *,
+.editor__grid > *,
+.moveslot,
+.statrow > * {
+  min-width: 0;
+}

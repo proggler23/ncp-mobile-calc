@@ -19,16 +19,19 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm run build:data -- --refresh
+      # data + bridge name maps (the CI checkout has no download cache, so this always refetches)
+      - run: npm run build:assets
       - run: npm run typecheck && npm test
       - uses: peter-evans/create-pull-request@v7
         with:
           branch: chore/refresh-data
           delete-branch: true
-          add-paths: src/data/generated
+          add-paths: |
+            src/data/generated
+            src/bridge/generated
           commit-message: 'chore(data): refresh generated game data'
           title: 'chore(data): refresh generated game data'
           body: |
-            Automated weekly refresh of `src/data/generated/` via `npm run build:data`.
+            Automated weekly refresh of `src/data/generated/` and `src/bridge/generated/` via `npm run build:assets`.
             Sources and versions are recorded in `src/data/generated/sources.json`.
           labels: data
