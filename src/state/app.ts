@@ -462,6 +462,7 @@ export async function flushMatchup(): Promise<void> {
   clearTimeout(persistTimer)
   const p = pending
   pending = undefined
+  await persistQueue // settings writes (gen, layout, ...) are part of "everything is saved"
   if (!p) return
   try {
     await (await getRepository()).setMatchup(p.gen, p.value)
