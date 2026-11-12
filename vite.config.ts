@@ -2,12 +2,37 @@
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
+import { readFileSync } from 'node:fs'
+
+/** The generation whose data ships in the precache (the current VGC format). */
+const PRECACHED_GEN = 'champions'
+
+const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as {
+  version: string
+}
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   const base = env.VITE_BASE || process.env.VITE_BASE || '/'
   return {
     base,
+    define: { __APP_VERSION__: JSON.stringify(pkg.version) },
+    build: {
+      rolldownOptions: {
+        output: {
+          // Per-generation data chunks get recognizable names so the service worker can leave
+          // them out of the precache (see `workbox` below): gendata-<gen>-<file>, genmap-<gen>.
+          chunkFileNames: (chunk) => {
+            const id = (chunk.facadeModuleId ?? '').replaceAll('\\', '/')
+            const data = /\/src\/data\/generated\/([^/]+)\/(dex|learnsets|sets)\.json/.exec(id)
+            if (data) return `assets/gendata-${data[1]}-${data[2]}-[hash].js`
+            const map = /\/src\/bridge\/generated\/([^/]+)\.json/.exec(id)
+            if (map) return `assets/genmap-${map[1]}-[hash].js`
+            return 'assets/[name]-[hash].js'
+          },
+        },
+      },
+    },
     plugins: [
       react(),
       VitePWA({
@@ -36,7 +61,26 @@ export default defineConfig(({ mode }) => {
         },
         workbox: {
           globPatterns: ['**/*.{js,css,html,svg,png,ico,webmanifest,json}'],
+          // Precache: app shell, UI chunks, engine/NCP script chunks and the Champions data (the
+          // current format). Every other generation is fetched on first use and then served from
+          // the runtime cache below.
+          globIgnores: [
+            `assets/gendata-!(${PRECACHED_GEN})-*`,
+            `assets/genmap-!(${PRECACHED_GEN})-*`,
+          ],
           navigateFallback: 'index.html',
+          runtimeCaching: [
+            {
+              urlPattern: /\/assets\/gen(data|map)-[^/]+\.js$/,
+              handler: 'CacheFirst',
+              options: {
+                cacheName: 'gen-data-v1',
+                // 11 other generations x 4 chunks, plus room for a few superseded builds.
+                expiration: { maxEntries: 120, maxAgeSeconds: 60 * 60 * 24 * 180 },
+                cacheableResponse: { statuses: [200] },
+              },
+            },
+          ],
         },
       }),
     ],

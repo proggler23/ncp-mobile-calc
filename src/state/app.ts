@@ -3,9 +3,24 @@ import type { DataGenId, PresetId, SavedSetLike } from '../bridge/types'
 import type { CommonSet } from '../data/types'
 import type { CalcInput, CalcResult } from '../engine/types'
 import { detectLang } from '../i18n'
-import type { Format, Lang, SavedSet, Settings, Team } from '../storage/types'
+import type {
+  CustomSet,
+  Format,
+  Lang,
+  SavedSet,
+  Settings,
+  StoredMatchup,
+  Team,
+} from '../storage/types'
 import { DEFAULT_SETTINGS } from '../storage/types'
-import { emptyField, sanitizeField, toFieldInput, type SideFlag, type UiField } from './field'
+import {
+  SIDE_OPTIONS,
+  emptyField,
+  sanitizeField,
+  toFieldInput,
+  type SideFlag,
+  type UiField,
+} from './field'
 import { getLib, prepareLib } from './lib'
 import { blankSet, changeSpecies, sanitizeSet } from './sets'
 import { createStore } from './store'
@@ -27,7 +42,13 @@ export interface AppState {
   lang: Lang
   gen: DataGenId
   format: Format
+  /** The active team (any generation). */
   team?: Team
+  /** All saved teams / custom sets (every generation), newest first. */
+  teams: Team[]
+  customSets: CustomSet[]
+  /** The wanted generation could not be loaded (typically: offline and never downloaded). */
+  genNotice?: { gen: DataGenId; offline: boolean }
   mine?: SavedSetLike
   opp?: SavedSetLike
   /** Index of the selected team chip (when `mine` came from the team). */
@@ -47,6 +68,8 @@ const initialState = (): AppState => ({
   lang: detectLang(),
   gen: DEFAULT_SETTINGS.gen,
   format: DEFAULT_SETTINGS.format,
+  teams: [],
+  customSets: [],
   oppPreset: null,
   oppHasCommon: false,
   field: emptyField(),
@@ -62,6 +85,9 @@ let initPromise: Promise<void> | undefined
 export function resetStore(): void {
   store.replace(initialState())
   initPromise = undefined
+  clearTimeout(persistTimer)
+  pending = undefined
+  seen = undefined
   tokens.mine = tokens.opp = tokens.gen = tokens.common = 0
 }
 
@@ -88,13 +114,13 @@ function computeCalc(s: AppState): Pick<AppState, 'calc' | 'calcError'> {
 }
 
 /** Apply a state patch and recalculate (cheap and synchronous once the engine is prepared). */
-function commit(patch: Partial<AppState>): void {
+export function commit(patch: Partial<AppState>): void {
   const next = { ...store.get(), ...patch }
   store.set({ ...patch, ...computeCalc(next) })
 }
 
 /** Storage (zod + idb) is loaded on demand, not in the first-paint bundle. */
-async function getRepository() {
+export async function getRepository() {
   return (await import('../storage')).getRepository()
 }
 
@@ -119,11 +145,10 @@ export function initApp(): Promise<void> {
 
 async function boot(): Promise<void> {
   let settings: Settings = { ...DEFAULT_SETTINGS, lang: store.get().lang }
-  let team: Team | undefined
   try {
     const repo = await getRepository()
     settings = await repo.getSettings()
-    team = await repo.getActiveTeam()
+    await reloadLibrary()
     let known = false
     try {
       known = localStorage.getItem(LANG_INIT_KEY) !== null
@@ -137,17 +162,56 @@ async function boot(): Promise<void> {
   } catch {
     /* storage unavailable: defaults (and the detected language) apply */
   }
-  const meta = GEN_META[settings.gen]
-  const format = meta.formats.includes(settings.format) ? settings.format : meta.defaultFormat
-  store.set({ status: 'loading', lang: settings.lang, gen: settings.gen, format, team })
+  let gen = settings.gen
+  const meta = GEN_META[gen]
+  let format = meta.formats.includes(settings.format) ? settings.format : meta.defaultFormat
+  store.set({ status: 'loading', lang: settings.lang, gen, format })
   try {
-    await prepareLib(settings.gen)
+    await prepareLib(gen)
   } catch (e) {
-    store.set({ status: 'error', error: e instanceof Error ? e.message : String(e) })
-    return
+    // The saved generation is not available (offline and never downloaded): fall back to the
+    // bundled default generation and tell the user.
+    if (gen === DEFAULT_SETTINGS.gen) return bootFailed(e)
+    try {
+      await prepareLib(DEFAULT_SETTINGS.gen)
+    } catch {
+      return bootFailed(e)
+    }
+    store.set({ genNotice: { gen, offline: isOffline() } })
+    gen = DEFAULT_SETTINGS.gen
+    const fb = GEN_META[gen]
+    format = fb.formats.includes(format) ? format : fb.defaultFormat
+    store.set({ gen, format })
   }
-  commit({ status: 'ready', booted: true })
-  if (team && team.gen === settings.gen && team.members.length > 0) selectTeamMember(0)
+  const saved = await loadStoredMatchup(gen)
+  commit({ status: 'ready', booted: true, ...saved })
+  const { team, mine } = store.get()
+  if (!mine && team && team.gen === gen && team.members.length > 0) selectTeamMember(0)
+  if (store.get().opp) void refreshCommon()
+  seen = snapshotKey(store.get())
+}
+
+function bootFailed(e: unknown): void {
+  store.set({ status: 'error', error: e instanceof Error ? e.message : String(e) })
+}
+
+function isOffline(): boolean {
+  return typeof navigator !== 'undefined' && navigator.onLine === false
+}
+
+/** Reload the saved teams, custom sets and the active team from storage. */
+export async function reloadLibrary(): Promise<void> {
+  try {
+    const repo = await getRepository()
+    const [teams, customSets, team] = await Promise.all([
+      repo.listTeams(),
+      repo.listCustomSets(),
+      repo.getActiveTeam(),
+    ])
+    store.set({ teams, customSets, team })
+  } catch {
+    /* storage unavailable */
+  }
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -169,18 +233,23 @@ export function setFormat(format: Format): void {
 export async function setGen(gen: DataGenId): Promise<void> {
   const prev = store.get()
   if (gen === prev.gen || prev.status === 'loading') return
+  void flushMatchup()
   const token = ++tokens.gen
-  store.set({ status: 'loading' })
+  store.set({ status: 'loading', genNotice: undefined })
   try {
     await prepareLib(gen)
   } catch (e) {
-    store.set({ status: 'error', error: e instanceof Error ? e.message : String(e) })
+    // Stay on the current generation (its data is loaded) and explain why.
+    void e
+    store.set({ status: 'ready', genNotice: { gen, offline: isOffline() } })
     return
   }
   if (token !== tokens.gen) return
   const meta = GEN_META[gen]
   const from = GEN_META[prev.gen]
   const format = meta.formats.includes(prev.format) ? prev.format : meta.defaultFormat
+  const saved = await loadStoredMatchup(gen, format)
+  if (token !== tokens.gen) return
   const mine = prev.mine && sanitizeSet(from, gen, prev.mine)
   const opp = prev.opp && sanitizeSet(from, gen, prev.opp)
   commit({
@@ -193,9 +262,157 @@ export async function setGen(gen: DataGenId): Promise<void> {
     mineTeamIndex: undefined,
     oppPreset: null,
     field: sanitizeField(meta, prev.field, format),
+    ...saved,
   })
   void persist({ gen, format })
   void refreshCommon()
+}
+
+export function dismissGenNotice(): void {
+  store.set({ genNotice: undefined })
+}
+
+// ---------------------------------------------------------------------------------------------
+// Matchup persistence (per generation)
+// ---------------------------------------------------------------------------------------------
+
+const PERSIST_DELAY_MS = 400
+const SIDE_KEYS: string[] = [...SIDE_OPTIONS.map((o) => o.key), 'spikes']
+const PRESET_IDS: readonly string[] = [
+  'neutral',
+  'physDef',
+  'specDef',
+  'physAtk',
+  'specAtk',
+  'common',
+]
+let persistTimer: ReturnType<typeof setTimeout> | undefined
+let pending: { gen: DataGenId; value: StoredMatchup } | undefined
+let seen: string | undefined
+let seenRefs: unknown[] = []
+
+function snapshotKey(s: AppState): string {
+  seenRefs = [s.gen, s.mine, s.opp, s.field, s.oppPreset, s.mineTeamIndex, s.team?.uid]
+  return 'k'
+}
+
+function refsChanged(s: AppState): boolean {
+  const next = [s.gen, s.mine, s.opp, s.field, s.oppPreset, s.mineTeamIndex, s.team?.uid]
+  return next.some((v, i) => v !== seenRefs[i])
+}
+
+function toStored(s: AppState): StoredMatchup {
+  return {
+    ...(s.mine ? { mine: s.mine as unknown as Record<string, unknown> } : {}),
+    ...(s.opp ? { opp: s.opp as unknown as Record<string, unknown> } : {}),
+    field: s.field as unknown as Record<string, unknown>,
+    oppPreset: s.oppPreset,
+    ...(s.team && s.mineTeamIndex !== undefined
+      ? { teamUid: s.team.uid, mineTeamIndex: s.mineTeamIndex }
+      : {}),
+    savedAt: Date.now(),
+  }
+}
+
+/** Writes the pending matchup immediately (also called when the page is hidden). */
+export async function flushMatchup(): Promise<void> {
+  clearTimeout(persistTimer)
+  const p = pending
+  pending = undefined
+  if (!p) return
+  try {
+    await (await getRepository()).setMatchup(p.gen, p.value)
+  } catch {
+    /* storage unavailable or full: the matchup just is not restored next time */
+  }
+}
+
+store.subscribe(() => {
+  const s = store.get()
+  if (!s.booted || s.status !== 'ready' || seen === undefined || !refsChanged(s)) return
+  snapshotKey(s)
+  pending = { gen: s.gen, value: toStored(s) }
+  clearTimeout(persistTimer)
+  persistTimer = setTimeout(() => void flushMatchup(), PERSIST_DELAY_MS)
+})
+
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') void flushMatchup()
+  })
+  window.addEventListener('pagehide', () => void flushMatchup())
+}
+
+/** Checks a stored build against the loaded generation (unknown species -> undefined). */
+function validateStored(gen: DataGenId, raw: Record<string, unknown> | undefined) {
+  if (!raw) return undefined
+  const set = { ...raw } as unknown as SavedSetLike
+  const b = getLib().bridge.getBridge(gen)
+  if (!b.kinds.species.byId.has(set.speciesId)) return undefined
+  const keep = (id: string) => b.kinds.moves.byId.has(id)
+  const moveIds: string[] = []
+  const overrides: SavedSetLike['moveOverrides'] = []
+  set.moveIds.forEach((id, i) => {
+    if (!keep(id)) return
+    moveIds.push(id)
+    overrides.push(set.moveOverrides?.[i] ?? undefined)
+  })
+  set.moveIds = moveIds
+  if (overrides.some(Boolean)) set.moveOverrides = overrides
+  else delete set.moveOverrides
+  if (set.itemId && !b.kinds.items.byId.has(set.itemId)) delete set.itemId
+  if (set.abilityId && !b.kinds.abilities.byId.has(set.abilityId)) delete set.abilityId
+  return set
+}
+
+/** Patch restoring the last matchup of `gen` (empty when none was saved). */
+async function loadStoredMatchup(
+  gen: DataGenId,
+  format: Format = store.get().format,
+): Promise<Partial<AppState>> {
+  let stored: StoredMatchup | undefined
+  try {
+    stored = await (await getRepository()).getMatchup(gen)
+  } catch {
+    return {}
+  }
+  if (!stored) return {}
+  const meta = GEN_META[gen]
+  const mine = validateStored(gen, stored.mine)
+  const opp = validateStored(gen, stored.opp)
+  const f = stored.field ?? {}
+  const base = emptyField()
+  const pick = (o: unknown, keys: string[]) =>
+    Object.fromEntries(
+      Object.entries((o ?? {}) as Record<string, unknown>).filter(([k]) => keys.includes(k)),
+    )
+  const field: UiField = {
+    ...base,
+    ...(typeof f.weather === 'string' ? { weather: f.weather as UiField['weather'] } : {}),
+    ...(typeof f.terrain === 'string' ? { terrain: f.terrain as UiField['terrain'] } : {}),
+    gravity: f.gravity === true,
+    neutralizingGas: f.neutralizingGas === true,
+    auras: { ...base.auras, ...pick(f.auras, Object.keys(base.auras)) },
+    ruin: { ...base.ruin, ...pick(f.ruin, Object.keys(base.ruin)) },
+    mine: pick(f.mine, SIDE_KEYS) as UiField['mine'],
+    opp: pick(f.opp, SIDE_KEYS) as UiField['opp'],
+  }
+  const team = store.get().team
+  const idx = stored.mineTeamIndex
+  const fromTeam =
+    mine &&
+    idx !== undefined &&
+    team?.uid === stored.teamUid &&
+    team?.gen === gen &&
+    team?.members[idx]?.speciesId === mine.speciesId
+  const preset = PRESET_IDS.includes(stored.oppPreset ?? '') ? (stored.oppPreset as PresetId) : null
+  return {
+    mine,
+    opp,
+    mineTeamIndex: fromTeam ? idx : undefined,
+    oppPreset: opp ? preset : null,
+    field: sanitizeField(meta, field, format),
+  }
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -248,6 +465,13 @@ export function savedToSet(m: SavedSet): SavedSetLike {
   void _uid
   void _gen
   return rest
+}
+
+/** Use one of the user's saved sets for the opponent. */
+export function applyCustomSet(cs: CustomSet): void {
+  const cur = store.get()
+  if (cs.gen !== cur.gen) return
+  commit({ opp: { speciesId: cs.speciesId, ...structuredClone(cs.set) }, oppPreset: null })
 }
 
 export async function applyOppPreset(preset: PresetId): Promise<void> {

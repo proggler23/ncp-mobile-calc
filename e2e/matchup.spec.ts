@@ -39,6 +39,12 @@ for (const width of [360, 0]) {
     if (width) await page.setViewportSize({ width, height: 700 })
     const name = info.project.name
     await page.goto('/')
+    // The first run starts in Champions; this scenario is a Scarlet/Violet one.
+    await expect(page.getByRole('button', { name: /Choose my Pokémon/ })).toBeVisible({
+      timeout: 30_000,
+    })
+    await page.getByLabel('Generation').selectOption('sv')
+    await expect(page.getByLabel('Generation')).toBeEnabled()
     await page.getByRole('button', { name: /Choose my Pokémon/ }).click({ timeout: 30_000 })
 
     // species search: autofocused, no iOS zoom (>= 16px)

@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, type KeyboardEvent, type ReactNode } from 'react'
+import { useOverlayHistory } from './useOverlay'
 import './ui.css'
 
 const FOCUSABLE =
@@ -33,6 +34,7 @@ export function Dialog({
 }: DialogProps) {
   const ref = useRef<HTMLDivElement>(null)
   const titleId = useId()
+  useOverlayHistory(onClose)
 
   useEffect(() => {
     const opener = document.activeElement as HTMLElement | null

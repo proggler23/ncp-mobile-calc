@@ -1,0 +1,24 @@
+.menu {
+  display: grid;
+  gap: 1rem;
+  padding: 0.5rem 0.75rem 0.75rem;
+}
+
+.menu__section {
+  display: grid;
+  gap: 0.375rem;
+}
+
+.menu__section h3 {
+  font-size: 1rem;
+}
+
+.menu__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.menu__row > .btn {
+  flex: 1 1 auto;
+}

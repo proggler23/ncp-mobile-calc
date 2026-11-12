@@ -1,14 +1,19 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
 import { GEN_DATA_IDS, GEN_META } from './bridge/gens'
 import type { DataGenId } from './bridge/types'
-import { initApp, setFormat, setGen, setLang } from './state/app'
+import { dismissGenNotice, flushMatchup, initApp, setFormat, setGen } from './state/app'
 import { useApp, useT } from './state/hooks'
+import { useRoute } from './state/route'
 import { Segmented } from './ui/controls'
 
 // The matchup screen pulls in the bridge, the engine glue and all pickers; keep it out of the
 // first paint. The data tables and NCP scripts load on top of it (see state/lib.ts).
 const loadMatchup = () => import('./features/matchup/MatchupScreen')
 const MatchupScreen = lazy(loadMatchup)
+const TeamsScreen = lazy(() => import('./features/teams/TeamsScreen'))
+const MenuSheet = lazy(() =>
+  import('./features/menu/MenuSheet').then((m) => ({ default: m.MenuSheet })),
+)
 
 function Skeleton() {
   const t = useT()
@@ -24,11 +29,11 @@ function Skeleton() {
 
 function TopBar() {
   const t = useT()
-  const lang = useApp((s) => s.lang)
   const gen = useApp((s) => s.gen)
   const format = useApp((s) => s.format)
   const status = useApp((s) => s.status)
   const meta = GEN_META[gen]
+  const [menu, setMenu] = useState(false)
   return (
     <header className="topbar">
       <h1 className="topbar__title">{t('app.title')}</h1>
@@ -58,38 +63,20 @@ function TopBar() {
       )}
       <button
         type="button"
-        className="btn topbar__lang"
-        aria-label={t('top.lang')}
-        onClick={() => setLang(lang === 'de' ? 'en' : 'de')}
+        className="btn btn--icon topbar__menu"
+        aria-label={t('top.menu')}
+        aria-haspopup="dialog"
+        onClick={() => setMenu(true)}
       >
-        {lang === 'de' ? 'DE' : 'EN'}
+        ⋮
       </button>
+      {menu && (
+        <Suspense fallback={null}>
+          <MenuSheet onClose={() => setMenu(false)} />
+        </Suspense>
+      )}
     </header>
   )
-}
-
-function TeamsPlaceholder() {
-  const t = useT()
-  return (
-    <section className="placeholder">
-      <h2>{t('team.placeholderTitle')}</h2>
-      {/* TODO(Phase 5b): team list and team editor. */}
-      <p>{t('team.placeholderText')}</p>
-      <a className="btn btn--primary" href="#/">
-        {t('common.back')}
-      </a>
-    </section>
-  )
-}
-
-function useHashRoute(): string {
-  const [hash, setHash] = useState(() => globalThis.location?.hash ?? '')
-  useEffect(() => {
-    const on = () => setHash(location.hash)
-    window.addEventListener('hashchange', on)
-    return () => window.removeEventListener('hashchange', on)
-  }, [])
-  return hash.replace(/^#\/?/, '')
 }
 
 export default function App() {
@@ -98,11 +85,13 @@ export default function App() {
   const status = useApp((s) => s.status)
   const booted = useApp((s) => s.booted)
   const error = useApp((s) => s.error)
-  const route = useHashRoute()
+  const route = useRoute()
+  const genNotice = useApp((s) => s.genNotice)
 
   useEffect(() => {
     void initApp()
     void loadMatchup() // start fetching the screen chunk while settings/data load
+    return () => void flushMatchup()
   }, [])
   useEffect(() => {
     document.documentElement.lang = lang
@@ -112,15 +101,25 @@ export default function App() {
     <div className="app">
       <TopBar />
       <main className="app__main">
-        {route.startsWith('teams') ? (
-          <TeamsPlaceholder />
-        ) : status === 'error' && !booted ? (
+        {genNotice && (
+          <div className="notice" role="alert">
+            <p>
+              {t(genNotice.offline ? 'gen.offline' : 'gen.failed', {
+                gen: GEN_META[genNotice.gen].label,
+              })}
+            </p>
+            <button type="button" className="btn" onClick={dismissGenNotice}>
+              {t('common.dismiss')}
+            </button>
+          </div>
+        )}
+        {status === 'error' && !booted ? (
           <p className="notice notice--error" role="alert">
             {t('error.load')} {error}
           </p>
         ) : booted ? (
           <Suspense fallback={<Skeleton />}>
-            <MatchupScreen />
+            {route.startsWith('teams') ? <TeamsScreen /> : <MatchupScreen />}
           </Suspense>
         ) : (
           <Skeleton />

@@ -284,3 +284,76 @@ details.more > summary {
   color: var(--accent);
   cursor: pointer;
 }
+
+.sheet-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  padding-top: 0.75rem;
+}
+
+.text-input {
+  width: 100%;
+  min-height: var(--tap);
+  padding: 0 0.625rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  font-size: 1rem; /* >= 16px: no iOS zoom on focus */
+}
+
+textarea.text-input {
+  padding: 0.5rem 0.625rem;
+  min-height: 9rem;
+  resize: vertical;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 1rem;
+}
+
+.btn--danger {
+  background: var(--bad);
+  border-color: var(--bad);
+  color: #fff;
+}
+
+.name-form {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.toast {
+  margin: 0.5rem;
+  padding: 0.625rem 0.75rem;
+  border-radius: var(--radius);
+  background: var(--ok-bg);
+  font-size: 0.875rem;
+}
+
+.stack {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.badge {
+  padding: 0.0625rem 0.5rem;
+  border-radius: 999px;
+  background: var(--surface-2);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.badge--on {
+  background: var(--info-bg);
+}
+
+.saved-row {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.saved-row .row {
+  flex: 1;
+  min-width: 0;
+}

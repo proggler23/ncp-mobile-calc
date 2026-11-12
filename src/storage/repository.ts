@@ -5,11 +5,12 @@ import {
   BACKUP_APP_ID,
   backupSchemaVersion,
   parseCustomSet,
+  parseMatchup,
   parseSettings,
   parseTeam,
 } from './schema'
 import { DEFAULT_SETTINGS, LIMITS } from './types'
-import type { CustomSet, GenId, SavedSet, SetBody, Settings, Team } from './types'
+import type { CustomSet, GenId, SavedSet, SetBody, Settings, StoredMatchup, Team } from './types'
 
 export class StorageError extends Error {
   constructor(
@@ -60,6 +61,9 @@ export interface Repository {
   deleteCustomSet(uid: string): Promise<void>
   getSettings(): Promise<Settings>
   setSettings(patch: Partial<Settings>): Promise<Settings>
+  /** Last matchup (both builds + field) of a generation. Not part of the backup file. */
+  getMatchup(gen: GenId): Promise<StoredMatchup | undefined>
+  setMatchup(gen: GenId, value: StoredMatchup): Promise<void>
   exportBackup(): Promise<string>
   /** Untrusted JSON text. 'merge' upserts by uid; 'replace' wipes teams + custom sets first. */
   importBackup(text: string, mode?: 'merge' | 'replace'): Promise<ImportResult>
@@ -190,6 +194,15 @@ export function createRepository(backend: Backend): Repository {
 
     getSettings: readSettings,
     setSettings: writeSettings,
+
+    async getMatchup(gen) {
+      return parseMatchup(await backend.get('settings', `matchup:${gen}`))
+    },
+    async setMatchup(gen, value) {
+      // Round trip through JSON: drops `undefined` values and rejects anything the schema refuses.
+      const clean = checked(parseMatchup(JSON.parse(JSON.stringify(value))), 'matchup')
+      await backend.put('settings', `matchup:${gen}`, clean)
+    },
 
     async exportBackup() {
       const file: BackupFile = {

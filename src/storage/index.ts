@@ -1,6 +1,6 @@
 export * from './types'
 export { newUid } from './ids'
-export { parseSavedSet, parseTeam, parseCustomSet, parseSettings } from './schema'
+export { parseSavedSet, parseTeam, parseCustomSet, parseSettings, parseMatchup } from './schema'
 export { createRepository, getRepository, StorageError } from './repository'
 export type { Repository, BackupFile, ImportResult as BackupImportResult } from './repository'
 export { openBackend, openIdbBackend, createLocalStorageBackend } from './backend'

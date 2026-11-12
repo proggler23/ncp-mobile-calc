@@ -83,8 +83,20 @@ export interface Settings {
   format: Format
 }
 
-export const DEFAULT_SETTINGS: Settings = { lang: 'en', gen: 'sv', format: 'doubles' }
+export const DEFAULT_SETTINGS: Settings = { lang: 'en', gen: 'champions', format: 'doubles' }
 
 export function emptySpread(value: number): StatSpread {
   return { hp: value, atk: value, def: value, spa: value, spd: value, spe: value }
+}
+
+/** Persisted calculator state of one generation (both builds incl. battle state, and the field). */
+export interface StoredMatchup {
+  mine?: Record<string, unknown>
+  opp?: Record<string, unknown>
+  field?: Record<string, unknown>
+  oppPreset?: string | null
+  /** Team chip the `mine` build came from (only restored while that team is still active). */
+  teamUid?: string
+  mineTeamIndex?: number
+  savedAt: number
 }

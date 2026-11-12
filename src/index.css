@@ -164,6 +164,7 @@ p {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--surface-2);
+  color: var(--text);
   font-size: 1rem;
   font-weight: 600;
   text-decoration: none;
