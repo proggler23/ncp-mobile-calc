@@ -5,6 +5,7 @@ playwright-report
 test-results
 package-lock.json
 src/data/generated
+src/bridge/generated
 .cache
 vendor
 src/engine/__golden__
