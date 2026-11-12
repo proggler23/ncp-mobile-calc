@@ -1,12 +1,14 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type MouseEvent } from 'react'
 import { GEN_DATA_IDS } from '../../bridge/gens'
 import { prefetchGen } from '../../bridge/maps'
 import { analyticsEnabled, initAnalytics, setStatsOptOut, useAnalytics } from '../../analytics'
-import { PRIVACY_URL } from '../../config'
 import { markAllDownloaded } from '../../pwa'
 import { getRepository, reloadLibrary, setLang, store } from '../../state/app'
 import { useApp, useT } from '../../state/hooks'
 import { StorageError, errorKey } from '../../state/teams'
+import { LEGAL_ROUTES } from '../../legal/route'
+import { disclaimerText } from '../../legal/content'
+import { navigate } from '../../state/route'
 import { Dialog } from '../../ui/Dialog'
 import { Segmented, Toggle } from '../../ui/controls'
 import { SupportButton } from '../../ui/SupportButton'
@@ -93,6 +95,15 @@ export function MenuSheet({ onClose }: { onClose: () => void }) {
       setMsg({ kind: 'error', text: t('menu.downloadFailed') })
     }
     setProgress(undefined)
+  }
+
+  /** Closes the menu, then opens an in-app page (the router waits for the sheet to close). */
+  const openPage = (path: string) => (e: MouseEvent<HTMLAnchorElement>) => {
+    if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey)
+      return
+    e.preventDefault()
+    onClose()
+    navigate(path)
   }
 
   return (
@@ -209,7 +220,7 @@ export function MenuSheet({ onClose }: { onClose: () => void }) {
             <>
               <p className="hint">
                 {t('privacy.text')}{' '}
-                <a href={PRIVACY_URL} target="_blank" rel="noopener noreferrer">
+                <a href={`#${LEGAL_ROUTES.privacy}`} onClick={openPage(LEGAL_ROUTES.privacy)}>
                   {t('privacy.details')}
                 </a>
               </p>
@@ -237,6 +248,20 @@ export function MenuSheet({ onClose }: { onClose: () => void }) {
           <h3 id="menu-about">{t('menu.about')}</h3>
           <p className="muted">{t('menu.version', { version: __APP_VERSION__ })}</p>
           <DataVersionInfo />
+          <p className="hint">{disclaimerText(lang)}</p>
+        </section>
+
+        <section className="menu__section" aria-labelledby="menu-legal">
+          <h3 id="menu-legal">{t('menu.legal')}</h3>
+          <ul className="menu__links">
+            {(['imprint', 'privacy', 'disclaimer'] as const).map((k) => (
+              <li key={k}>
+                <a href={`#${LEGAL_ROUTES[k]}`} onClick={openPage(LEGAL_ROUTES[k])}>
+                  {t(`legal.${k}`)}
+                </a>
+              </li>
+            ))}
+          </ul>
         </section>
       </div>
       {how && <InstallHowTo onClose={() => setHow(false)} />}

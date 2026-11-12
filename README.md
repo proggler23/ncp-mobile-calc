@@ -156,7 +156,7 @@ repository variable `GOATCOUNTER_URL` is set (for example `https://<code>.goatco
 _Settings → Secrets and variables → Actions → Variables → New repository variable_. It is passed
 to the build as `VITE_GOATCOUNTER_URL` and checked at build time (https only; either a
 `*.goatcounter.com` host or a URL ending in `/count`). Unset or empty: no statistics, and the
-menu says so. See [Privacy](#privacy) and [docs/MAINTENANCE.md](docs/MAINTENANCE.md#usage-statistics-goatcounter).
+menu says so. See [Privacy](#privacy-policy) and [docs/MAINTENANCE.md](docs/MAINTENANCE.md#usage-statistics-goatcounter).
 
 **Base path.** `VITE_BASE` sets the path the app is served from (for example `/repo-name/`). It
 defaults to `/`. The deploy workflow sets it from the repository name. Set it yourself when you
@@ -173,37 +173,171 @@ generations, syncs the NCP upstream if it moved, and runs the validation gates:
 Thresholds, rollback, NCP patches and the German-name and curated-set workflows are in
 [docs/MAINTENANCE.md](docs/MAINTENANCE.md).
 
-## Privacy
+<!-- legal:start -->
 
-The app has no accounts, no cookies and no server of its own: teams, sets and calcs stay on your
-device (IndexedDB / localStorage). The only data that leaves it are a few **anonymous usage
-statistics**, counted by [GoatCounter](https://www.goatcounter.com/) (privacy-friendly, cookieless,
-no personal data; see [its privacy policy](https://www.goatcounter.com/privacy)). They are sent
-only by builds that were configured with a GoatCounter endpoint (see
-[Deployment](#deployment)); a fork or local build sends nothing.
+## Privacy policy
 
-**What is sent** (one small request each; GoatCounter also sees what every web request reveals,
-namely your IP address and browser, which it only uses to count a visitor once per day without
-storing either):
+_As of: 2026-11-12_
 
-| Name                                                                                            | When                                                                              |
-| ----------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| page view of `/` (plus a coarse screen size, and the referring site, without query or fragment) | the app is opened                                                                 |
-| `gen/<generation>/<regulation>`, e.g. `gen/champions/regmc`                                     | at start and when you change generation or regulation, once per value and session |
-| `share/native`, `share/copy-text`, `share/copy-link`                                            | a share or copy action succeeded                                                  |
-| `share-open`                                                                                    | a shared link was opened and applied                                              |
-| `share-open-new`                                                                                | additionally, when the device had no app data before (a new user)                 |
-| `install/accepted`                                                                              | you accepted the browser's install dialog                                         |
-| `install/ios-howto`                                                                             | the iOS install instructions were opened                                          |
-| `install/standalone`                                                                            | the first start as an installed app (once per device)                             |
+### Controller
 
-**What is never sent:** teams, Pokémon, moves, sets, calc inputs or results, the share link or
-anything after the `#` or `?` of the address, names, user IDs or anything that identifies you.
+Alexander Hain, Linz, Österreich
 
-**Opt out** any time in the menu (⋮) under "Privacy" ("Send anonymous statistics"). Nothing is
-sent either when your browser sends Do Not Track or Global Privacy Control, when you are offline
-(nothing is queued for later), or in automated browsers. The choice is stored on the device only
-and is not part of backups.
+Email: [al.hain@gmx.at](mailto:al.hain@gmx.at)
+
+### Hosting (GitHub Pages)
+
+The app is served by GitHub Pages (GitHub, Inc., USA). When you open the site, GitHub processes technically necessary data in server logs, including your IP address and request data (e.g. date, time, requested file, browser). We have no influence on this processing.
+
+The legal basis is Art. 6(1)(f) GDPR (legitimate interest in providing the site).
+
+Data may be processed in the USA. GitHub is certified under the EU-US Data Privacy Framework ([listing](https://www.dataprivacyframework.gov/participant/6174)). Details: [GitHub’s privacy statement](https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement).
+
+### Anonymous usage statistics (GoatCounter)
+
+We count anonymously how the app is used, with [GoatCounter](https://www.goatcounter.com/). GoatCounter is operated by Martin Tournoij (Ireland); its data is stored on servers of Hetzner Online GmbH in Finland and Germany. GoatCounter sets no cookies and stores neither IP addresses nor the full User-Agent nor a tracker ID. The IP address and User-Agent are only used briefly in memory to count repeat visits once for up to 8 hours, and to derive the country. Only aggregate counts are stored (e.g. browser, operating system, country, language, screen width per day). Sources: [GoatCounter privacy policy](https://www.goatcounter.com/help/privacy), [GoatCounter and GDPR](https://www.goatcounter.com/help/gdpr).
+
+Statistics are only sent by builds that were configured with a GoatCounter endpoint. One small request is sent per event:
+
+- **page view of `/`**: the app was opened (with a coarse screen size and the referring site, without query or fragment)
+- `gen/<generation>/<regulation>`: at start and when the generation or regulation changes, once per value and session
+- `share/native`: the system share dialog was used successfully
+- `share/copy-text`: calc text was copied
+- `share/copy-link`: a share link was copied
+- `share-open`: a shared link was opened and applied
+- `share-open-new`: in addition, when the device had no app data before (a new user)
+- `install/accepted`: the browser’s install dialog was accepted
+- `install/ios-howto`: the iOS install instructions were opened
+- `install/standalone`: first start as an installed app (once per device)
+
+Never sent: teams, Pokémon, moves, sets, calc inputs or results, the share link or anything after the “#” or “?” of the address, names, user IDs or anything that identifies you.
+
+Storage on your device: at start the app checks whether app data already existed on the device (to count “new user via shared link”; the result is only kept in memory) and stores a flag whether the “install/standalone” event was already sent. No cookies are used.
+
+The legal basis is Art. 6(1)(f) GDPR (legitimate interest in anonymous audience measurement to improve the app).
+
+Objection: you can switch statistics off at any time in the menu (⋮) under “Privacy” with the switch “Send anonymous statistics”. Nothing is sent either when your browser signals Do Not Track or Global Privacy Control, when you are offline (nothing is queued for later) or in automated browsers. The choice is stored on the device only and is not part of backups.
+
+### Local data on your device
+
+Teams, sets, settings (e.g. language, generation) and the last matchup are stored in your browser’s IndexedDB / localStorage and are never transmitted to us or to third parties. Delete them with your browser data or by uninstalling the app.
+
+### Shared calc links
+
+The calc data is contained in the link itself (after the “#”). Anyone who has the link can see it; you decide whom you give it to. Nothing is stored on a server.
+
+### External links
+
+The app links to external sites (e.g. Buy Me a Coffee, GitHub, Smogon, Nimbasa City Post). Their privacy rules apply once you follow a link; we have no influence on them.
+
+### Your rights
+
+You have the right of access, rectification, erasure, restriction of processing, data portability and objection. Write to [al.hain@gmx.at](mailto:al.hain@gmx.at). As GoatCounter stores no personal data, no record can be attributed to you there.
+
+You also have the right to lodge a complaint with the supervisory authority: the Austrian Data Protection Authority (Datenschutzbehörde), [www.dsb.gv.at](https://www.dsb.gv.at).
+
+## Imprint / Disclosure
+
+### Media owner and publisher (Medieninhaber und Herausgeber)
+
+Alexander Hain, Linz, Österreich
+
+Contact: [al.hain@gmx.at](mailto:al.hain@gmx.at)
+
+### Purpose of the site (§ 25 MedienG)
+
+An unofficial, non-commercial fan project: a free damage calculator for Pokémon VGC battles. It is not affiliated with Nintendo, Game Freak, The Pokémon Company or Nimbasa City Post.
+
+Optional voluntary donations (e.g. via [Buy Me a Coffee](https://buymeacoffee.com/proggler23)) support development and hosting.
+
+### Disclaimer
+
+All calculations are provided without warranty. The results are based on the NCP Damage Calculator and on data from Pokémon Showdown and Smogon and may contain errors. Unofficial fan project. Pokémon and all related names are trademarks of Nintendo, Game Freak and The Pokémon Company.
+
+### Deutsche Fassung
+
+#### Impressum
+
+##### Medieninhaber und Herausgeber
+
+Alexander Hain, Linz, Österreich
+
+Kontakt: [al.hain@gmx.at](mailto:al.hain@gmx.at)
+
+##### Grundlegende Richtung (§ 25 MedienG)
+
+Inoffizielles, nicht kommerzielles Fanprojekt: ein kostenloser Schadensrechner für Pokémon-VGC-Kämpfe. Es besteht keine Verbindung zu Nintendo, Game Freak, The Pokémon Company oder Nimbasa City Post.
+
+Freiwillige Spenden (z. B. über [Buy Me a Coffee](https://buymeacoffee.com/proggler23)) unterstützen Entwicklung und Hosting. Sie sind vollkommen optional.
+
+##### Haftungsausschluss
+
+Alle Berechnungen ohne Gewähr. Die Ergebnisse basieren auf dem NCP Damage Calculator sowie Daten von Pokémon Showdown und Smogon und können Fehler enthalten. Inoffizielles Fanprojekt. Pokémon und alle zugehörigen Namen sind Marken von Nintendo, Game Freak und The Pokémon Company.
+
+#### Datenschutzerklärung
+
+_Stand: 12.11.2026_
+
+##### Verantwortlicher
+
+Alexander Hain, Linz, Österreich
+
+E-Mail: [al.hain@gmx.at](mailto:al.hain@gmx.at)
+
+##### Hosting (GitHub Pages)
+
+Die App wird über GitHub Pages ausgeliefert (GitHub, Inc., USA). Beim Aufruf der Website verarbeitet GitHub technisch notwendige Daten in Server-Logs, darunter Ihre IP-Adresse und Anfragedaten (z. B. Datum, Uhrzeit, angeforderte Datei, Browser). Auf diese Verarbeitung haben wir keinen Einfluss.
+
+Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an der Bereitstellung der Website).
+
+Dabei können Daten in die USA übermittelt werden. GitHub ist unter dem EU-US Data Privacy Framework zertifiziert ([Eintrag](https://www.dataprivacyframework.gov/participant/6174)). Details: [Datenschutzerklärung von GitHub](https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement).
+
+##### Anonyme Nutzungsstatistik (GoatCounter)
+
+Wir zählen anonym, wie die App genutzt wird, mit [GoatCounter](https://www.goatcounter.com/). Betreiber von GoatCounter ist Martin Tournoij (Irland); die Daten liegen auf Servern von Hetzner Online GmbH in Finnland und Deutschland. GoatCounter setzt keine Cookies und speichert weder IP-Adressen noch den vollständigen User-Agent noch eine Tracker-ID. Die IP-Adresse und der User-Agent werden nur kurzfristig im Arbeitsspeicher verwendet, um wiederkehrende Besuche innerhalb von bis zu 8 Stunden einmal zu zählen, und um das Land zu bestimmen. Gespeichert werden nur aggregierte Zähler (z. B. Browser, Betriebssystem, Land, Sprache, Bildschirmbreite pro Tag). Quellen: [Datenschutz von GoatCounter](https://www.goatcounter.com/help/privacy), [GoatCounter und DSGVO](https://www.goatcounter.com/help/gdpr).
+
+Die Statistik wird nur von Builds gesendet, die mit einem GoatCounter-Endpunkt konfiguriert sind. Pro Ereignis wird eine kleine Anfrage gesendet:
+
+- **page view of `/`**: die App wurde geöffnet (mit grober Bildschirmgröße und der verweisenden Website ohne Query und Fragment)
+- `gen/<generation>/<regulation>`: beim Start und beim Wechsel von Generation oder Regelwerk, einmal pro Wert und Sitzung
+- `share/native`: der System-Teilen-Dialog wurde erfolgreich genutzt
+- `share/copy-text`: Calc-Text wurde kopiert
+- `share/copy-link`: ein Teilen-Link wurde kopiert
+- `share-open`: ein geteilter Link wurde geöffnet und angewendet
+- `share-open-new`: zusätzlich, wenn auf dem Gerät vorher keine App-Daten vorhanden waren (neue Nutzer:innen)
+- `install/accepted`: der Installationsdialog des Browsers wurde bestätigt
+- `install/ios-howto`: die iOS-Installationsanleitung wurde geöffnet
+- `install/standalone`: erster Start als installierte App (einmal pro Gerät)
+
+Nie gesendet werden: Teams, Pokémon, Attacken, Sets, Calc-Eingaben oder -Ergebnisse, der Teilen-Link oder alles nach dem „#“ oder „?“ der Adresse, Namen, Nutzerkennungen oder sonst etwas, das Sie identifiziert.
+
+Lokale Speicherung auf Ihrem Gerät: Die App prüft beim Start, ob auf dem Gerät bereits App-Daten vorhanden waren (um „neue Nutzer:innen über einen geteilten Link“ zu zählen; das Ergebnis wird nur im Arbeitsspeicher gehalten), und speichert ein Merkzeichen, ob das Ereignis „install/standalone“ bereits gesendet wurde. Es werden keine Cookies verwendet.
+
+Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an einer anonymen Reichweitenmessung, um die App zu verbessern).
+
+Widerspruch: Sie können die Statistik jederzeit im Menü (⋮) unter „Datenschutz“ mit dem Schalter „Anonyme Statistik senden“ ausschalten. Außerdem wird nichts gesendet, wenn Ihr Browser „Do Not Track“ oder „Global Privacy Control“ signalisiert, wenn Sie offline sind (nichts wird für später vorgemerkt) oder in automatisierten Browsern. Die Einstellung wird nur auf dem Gerät gespeichert und ist nicht Teil von Backups.
+
+##### Lokale Daten auf Ihrem Gerät
+
+Teams, Sets, Einstellungen (z. B. Sprache, Generation) und der zuletzt bearbeitete Vergleich werden in IndexedDB bzw. localStorage Ihres Browsers gespeichert und nie an uns oder Dritte übertragen. Sie löschen sie über die Browserdaten bzw. durch Deinstallieren der App.
+
+##### Geteilte Calc-Links
+
+Die Calc-Daten stehen im Link selbst (nach dem „#“). Jede Person, die den Link hat, kann sie sehen; wem Sie den Link geben, entscheiden Sie. Es gibt keine Speicherung auf einem Server.
+
+##### Externe Links
+
+Die App verlinkt auf externe Seiten (z. B. Buy Me a Coffee, GitHub, Smogon, Nimbasa City Post). Nach dem Anklicken gelten dort deren Datenschutzbestimmungen; wir haben darauf keinen Einfluss.
+
+##### Ihre Rechte
+
+Sie haben das Recht auf Auskunft, Berichtigung, Löschung, Einschränkung der Verarbeitung, Datenübertragbarkeit und Widerspruch. Schreiben Sie dazu an [al.hain@gmx.at](mailto:al.hain@gmx.at). Da GoatCounter keine personenbezogenen Daten speichert, kann dort kein Datensatz Ihrer Person zugeordnet werden.
+
+Sie haben außerdem das Recht, sich bei der Aufsichtsbehörde zu beschweren: Österreichische Datenschutzbehörde (Datenschutzbehörde), [www.dsb.gv.at](https://www.dsb.gv.at).
+
+The same texts are shown in the app (menu → Legal). German is the primary language of the legal notice.
+
+<!-- legal:end -->
 
 ## Support
 
@@ -224,11 +358,6 @@ hosting. They are entirely optional.
   text is stored or shown.
 
 Full notices and the license texts of all bundled dependencies are in [THIRD_PARTY.md](THIRD_PARTY.md).
-
-## Trademark notice
-
-Pokémon and Pokémon character names are trademarks of Nintendo, Game Freak and The Pokémon Company.
-This is an unofficial fan project and is not affiliated with or endorsed by them.
 
 ## License
 

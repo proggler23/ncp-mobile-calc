@@ -1,9 +1,9 @@
 /**
  * Anonymous, cookieless usage statistics via GoatCounter (opt-out). What is sent is listed in the
- * README ("Privacy"); the request format follows GoatCounter's documented `/count` endpoint
- * (https://www.goatcounter.com/help/pixel): a plain GET with `p` (path or event name), `t`
- * (title), `r` (referrer), `e` (event flag) and `s` (screen size). GoatCounter's own count.js is
- * deliberately not loaded.
+ * privacy policy (src/legal/content.ts, README "Privacy"); the request format follows
+ * GoatCounter's documented `/count` endpoint (https://www.goatcounter.com/help/pixel): a plain
+ * GET with `p` (path or event name), `t` (title), `r` (referrer), `e` (event flag) and `s`
+ * (screen size). GoatCounter's own count.js is deliberately not loaded.
  *
  * Nothing is sent when: no endpoint was configured at build time (`VITE_GOATCOUNTER_URL`), the
  * user opted out, the browser signals Do Not Track / Global Privacy Control, the device is
@@ -15,17 +15,10 @@ import { isStandalone, readEnv } from '../install/platform'
 import { getRepository, initApp, isFreshDevice, store } from '../state/app'
 import { createStore, useStore } from '../state/store'
 import type { AnalyticsPrefs } from '../storage/types'
+import type { AnalyticsEvent } from './events'
 
-export type AnalyticsEvent =
-  | 'share/native'
-  | 'share/copy-text'
-  | 'share/copy-link'
-  | 'share-open'
-  | 'share-open-new'
-  | 'install/accepted'
-  | 'install/ios-howto'
-  | 'install/standalone'
-  | `gen/${string}`
+export { ANALYTICS_EVENTS, GEN_EVENT_PATTERN, STATIC_EVENTS } from './events'
+export type { AnalyticsEvent } from './events'
 
 interface Hit {
   /** Page path or, for events, the event name (never starts with a slash). */

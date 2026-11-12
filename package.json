@@ -21,6 +21,7 @@
     "build:assets": "npm run build:data && npm run build:bridge && npm run build:share-ids",
     "typecheck:bridge": "tsc -p scripts/build-bridge/tsconfig.json",
     "build:version": "tsx scripts/build-data/version.ts",
+    "docs:legal": "tsx scripts/docs-legal.ts",
     "og:image": "node scripts/generate-og-image.mjs",
     "typecheck:scripts": "tsc -p scripts/tsconfig.json",
     "check:data": "tsx scripts/check-data/index.ts",
