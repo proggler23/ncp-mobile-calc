@@ -28,6 +28,17 @@ const IGNORE_POPS_TIMEOUT_MS = 1000
 let ignoreTimer: ReturnType<typeof setTimeout> | undefined
 let listening = false
 let seq = 0
+const listeners = new Set<() => void>()
+
+/** Notifies when the number of open overlays may have changed (for `useSyncExternalStore`). */
+export function subscribeOverlays(fn: () => void): () => void {
+  listeners.add(fn)
+  return () => void listeners.delete(fn)
+}
+
+function notify(): void {
+  listeners.forEach((fn) => fn())
+}
 
 export function nextOverlayId(): number {
   return ++seq
@@ -104,6 +115,7 @@ function onPop(): void {
   top.close()
   drainDead()
   flushWaiting()
+  notify()
 }
 
 function onDeadPopped(): void {
@@ -138,6 +150,7 @@ export function acquireOverlay(id: number, close: () => void): void {
   }
   stack.push({ id, close, dead: false, releasing: false })
   history.pushState({ ...(history.state as object | null), ncpOverlay: id }, '')
+  notify()
 }
 
 /** Updates the close callback without touching history. */
@@ -166,6 +179,7 @@ function finalizeRelease(id: number): void {
     e.dead = true
     e.releasing = false
   }
+  notify()
 }
 
 export function overlayDepth(): number {
@@ -178,4 +192,5 @@ export function resetOverlays(): void {
   ignorePops = 0
   clearTimeout(ignoreTimer)
   waiting = []
+  notify()
 }

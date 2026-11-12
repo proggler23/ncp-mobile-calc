@@ -21,6 +21,7 @@ import { LIMITS } from '../storage/types'
 import { getRepository, reloadLibrary, selectTeamMember, setGen, store } from './app'
 import { getLib } from './lib'
 import { blankSet } from './sets'
+import { noteTeamSaved } from './supportNudge'
 
 export { StorageError }
 
@@ -94,6 +95,7 @@ async function write(uid: string, members: SavedSet[]): Promise<Team> {
   const t = await (await repo()).updateTeam(uid, { members })
   await reloadLibrary()
   clearTeamSelection(uid)
+  noteTeamSaved(members.length)
   return t
 }
 
@@ -119,6 +121,7 @@ async function createTeamU(name: string, gen: DataGenId, members: SavedSet[]): P
   })
   if (!store.get().team) await r.setActiveTeam(t.uid)
   await reloadLibrary()
+  noteTeamSaved(members.length)
   return t
 }
 

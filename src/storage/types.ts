@@ -107,11 +107,32 @@ export interface CustomSet {
   updatedAt: number
 }
 
+/**
+ * One-time "support the project" nudge state. Device-local: never part of a backup (export omits it,
+ * import keeps the device's own value).
+ */
+export interface SupportNudge {
+  state: 'pending' | 'snoozed' | 'done'
+  /** Debounced calculations so far (see state/supportNudge.ts). */
+  calcCount: number
+  /** How often "Later" was chosen. */
+  snoozeCount: number
+  /** Time (ms) and `calcCount` of the last "Later". */
+  snoozedAt?: number
+  snoozedAtCount?: number
+  /** A team got its first member persisted while still pending. */
+  triggered?: boolean
+}
+
 export interface Settings {
   lang: Lang
   gen: GenId
   activeTeamUid?: string
   format: Format
+  /** Device-local, excluded from backups. */
+  supportNudge?: SupportNudge
+  /** The menu was opened at least once (hides the "new" dot). Device-local, excluded from backups. */
+  menuSeen?: boolean
 }
 
 export const DEFAULT_SETTINGS: Settings = { lang: 'en', gen: 'champions', format: 'doubles' }

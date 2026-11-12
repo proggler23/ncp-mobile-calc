@@ -5,6 +5,7 @@ import { goBack, navigate, useRoute } from '../../state/route'
 import { createTeam, deleteTeam, duplicateTeam, switchActiveTeam } from '../../state/teams'
 import type { Team } from '../../storage/types'
 import { ConfirmDialog, NameDialog } from '../../ui/prompts'
+import { SupportButton } from '../../ui/SupportButton'
 import { PasteImportDialog } from './PasteImportDialog'
 import { TeamDetail } from './TeamDetail'
 import { useRunner } from './useRunner'
@@ -115,6 +116,8 @@ function TeamList() {
           ))}
         </ul>
       )}
+
+      <SupportButton className="support-card">{t('support.card')}</SupportButton>
 
       {modal === 'new' && (
         <NameDialog

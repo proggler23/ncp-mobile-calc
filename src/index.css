@@ -264,3 +264,78 @@ summary:focus-visible {
     background-position: -200% 0;
   }
 }
+
+/* ---- support (Buy Me a Coffee) ----
+ * Yellow #FFDD00 with near-black #1a1a1a text: contrast ~14:1 (WCAG AAA) in light and dark mode,
+ * because the button keeps its own colours in both schemes. Hover uses a darker yellow
+ * (#f2cf00, still ~12:1). The dark border keeps the edge visible on the light surface. */
+.btn--support {
+  background: #ffdd00;
+  border-color: #b39800;
+  color: #1a1a1a;
+  text-align: center;
+  white-space: normal;
+}
+
+.btn--support:hover {
+  background: #f2cf00;
+}
+
+.btn--support:focus-visible {
+  outline-color: #1a1a1a;
+}
+
+@media (prefers-color-scheme: dark) {
+  .btn--support:focus-visible {
+    outline-color: #ffffff;
+  }
+}
+
+.support-card {
+  display: flex;
+  width: 100%;
+  padding: 0.625rem 0.75rem;
+  overflow-wrap: anywhere;
+}
+
+.nudge {
+  flex: none;
+  display: grid;
+  gap: 0.375rem;
+  margin: 0.25rem 0.5rem 0;
+  padding: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.nudge__text {
+  margin: 0;
+  font-weight: 600;
+}
+
+.nudge__btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+.nudge__btns > .btn {
+  flex: 1 1 auto;
+}
+
+.topbar__menu {
+  position: relative;
+}
+
+.topbar__dot {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #ffdd00;
+  border: 2px solid var(--surface);
+  box-shadow: 0 0 0 1px #b39800;
+}

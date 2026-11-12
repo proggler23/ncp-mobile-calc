@@ -11,6 +11,7 @@ import {
 } from './state/app'
 import { refreshStaleDownloads } from './pwa'
 import { useApp, useT } from './state/hooks'
+import { initSupportNudge, markMenuSeen, useSupport } from './state/supportNudge'
 import { useRoute } from './state/route'
 import { Segmented } from './ui/controls'
 
@@ -42,6 +43,7 @@ function TopBar() {
   const status = useApp((s) => s.status)
   const meta = GEN_META[gen]
   const [menu, setMenu] = useState(false)
+  const unseen = useSupport((s) => s.loaded && !s.menuSeen)
   return (
     <header className="topbar">
       <h1 className="topbar__title">{t('app.title')}</h1>
@@ -72,11 +74,14 @@ function TopBar() {
       <button
         type="button"
         className="btn btn--icon topbar__menu"
-        aria-label={t('top.menu')}
+        aria-label={unseen ? t('top.menuNew') : t('top.menu')}
         aria-haspopup="dialog"
-        onClick={() => setMenu(true)}
+        onClick={() => {
+          markMenuSeen()
+          setMenu(true)
+        }}
       >
-        ⋮
+        ⋮{unseen && <span className="topbar__dot" aria-hidden="true" />}
       </button>
       {menu && (
         <Suspense fallback={null}>
@@ -99,6 +104,7 @@ export default function App() {
 
   useEffect(() => {
     void initApp().then(async () => {
+      void initSupportNudge()
       // After an app update, re-download the generations the user had saved for offline use.
       const { prefetchGen } = await import('./bridge/maps')
       await refreshStaleDownloads(GEN_DATA_IDS, (g) => prefetchGen(g as DataGenId))

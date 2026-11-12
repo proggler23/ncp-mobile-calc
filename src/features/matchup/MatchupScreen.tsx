@@ -10,6 +10,7 @@ import { FieldSummary } from './FieldSummary'
 import { MoveResults } from './MoveResults'
 import { PokemonCard } from './PokemonCard'
 import { PresetRow } from './PresetRow'
+import { SupportNudge } from './SupportNudge'
 import './matchup.css'
 
 type Sheet = 'field' | Side | null
@@ -50,6 +51,7 @@ export default function MatchupScreen() {
         <PresetRow />
       </div>
       <MoveResults />
+      <SupportNudge />
       <footer className="footer">
         <FieldSummary />
         <div className="footer__btns">

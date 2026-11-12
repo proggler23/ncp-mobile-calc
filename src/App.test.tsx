@@ -115,7 +115,7 @@ describe('matchup screen', () => {
   it('switches language and shows the German names', async () => {
     await renderReady()
     act(() => setMatchup(makeMine(), makeOpp()))
-    fireEvent.click(screen.getByRole('button', { name: 'Menu' }))
+    fireEvent.click(screen.getByRole('button', { name: /^Menu/ }))
     fireEvent.click(await screen.findByRole('radio', { name: 'Deutsch' }))
     fireEvent.click(screen.getByRole('button', { name: 'Schließen' }))
     expect(await screen.findByRole('heading', { name: 'Fuegro' })).toBeVisible()

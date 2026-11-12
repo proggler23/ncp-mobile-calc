@@ -36,6 +36,22 @@ async function importTeamViaUi(name = 'Paste team') {
   return dialog
 }
 
+describe('teams screen support card', () => {
+  it.each([
+    ['en', '☕ Like this app? Support development & hosting'],
+    ['de', '☕ Gefällt dir die App? Unterstütze Entwicklung & Hosting'],
+  ] as const)('shows a tappable yellow link card, also without teams (%s)', async (lang, label) => {
+    await resetAll({ gen: 'champions', lang })
+    await openApp('/teams')
+    act(() => store.set({ lang }))
+    const link = await screen.findByRole('link', { name: label })
+    expect(link).toHaveAttribute('href', 'https://buymeacoffee.com/proggler23')
+    expect(link).toHaveAttribute('target', '_blank')
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer')
+    expect(link).toHaveClass('btn--support', 'support-card')
+  })
+})
+
 describe('teams screen', () => {
   it('creates a team, adds a member via search with the Common set, and removes it', async () => {
     await openApp('/teams')

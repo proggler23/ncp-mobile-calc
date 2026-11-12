@@ -1,13 +1,13 @@
 import { useRef, useState } from 'react'
 import { GEN_DATA_IDS } from '../../bridge/gens'
 import { prefetchGen } from '../../bridge/maps'
-import { SUPPORT_URL } from '../../config'
 import { markAllDownloaded } from '../../pwa'
 import { getRepository, reloadLibrary, setLang, store } from '../../state/app'
 import { useApp, useT } from '../../state/hooks'
 import { StorageError, errorKey } from '../../state/teams'
 import { Dialog } from '../../ui/Dialog'
 import { Segmented } from '../../ui/controls'
+import { SupportButton } from '../../ui/SupportButton'
 import { DataVersionInfo } from './DataVersionInfo'
 import './menu.css'
 
@@ -89,6 +89,11 @@ export function MenuSheet({ onClose }: { onClose: () => void }) {
   return (
     <Dialog title={t('menu.title')} onClose={onClose} closeLabel={t('common.close')}>
       <div className="menu">
+        <section className="menu__section">
+          <SupportButton className="menu__support">{t('menu.support')}</SupportButton>
+          <p className="hint">{t('menu.supportHint')}</p>
+        </section>
+
         <section className="menu__section" aria-labelledby="menu-lang">
           <h3 id="menu-lang">{t('menu.language')}</h3>
           <Segmented
@@ -176,18 +181,6 @@ export function MenuSheet({ onClose }: { onClose: () => void }) {
             {msg.text}
           </p>
         )}
-
-        <section className="menu__section">
-          <a
-            className="btn menu__support"
-            href={SUPPORT_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            {t('menu.support')}
-          </a>
-          <p className="hint">{t('menu.supportHint')}</p>
-        </section>
 
         <section className="menu__section" aria-labelledby="menu-about">
           <h3 id="menu-about">{t('menu.about')}</h3>

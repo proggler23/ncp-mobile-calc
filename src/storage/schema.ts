@@ -108,6 +108,19 @@ export const settingsSchema = z.object({
   gen: genId,
   activeTeamUid: id.optional(),
   format: z.enum(['singles', 'doubles']),
+  // Device-local extras: a broken value falls back to "absent" instead of voiding all settings.
+  supportNudge: z
+    .object({
+      state: z.enum(['pending', 'snoozed', 'done']),
+      calcCount: z.number().int().min(0).max(1_000_000),
+      snoozeCount: z.number().int().min(0).max(10),
+      snoozedAt: ts.optional(),
+      snoozedAtCount: z.number().int().min(0).max(1_000_000).optional(),
+      triggered: z.boolean().optional(),
+    })
+    .optional()
+    .catch(undefined),
+  menuSeen: z.boolean().optional().catch(undefined),
 })
 
 const small = z.number().int().min(-1000).max(100_000)

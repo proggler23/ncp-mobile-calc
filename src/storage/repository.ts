@@ -205,13 +205,17 @@ export function createRepository(backend: Backend): Repository {
     },
 
     async exportBackup() {
+      // Device-local state (support nudge, menu hint) is not part of a backup.
+      const exported: Settings = { ...(await readSettings()) }
+      delete exported.supportNudge
+      delete exported.menuSeen
       const file: BackupFile = {
         app: BACKUP_APP_ID,
         version: backupSchemaVersion,
         exportedAt: Date.now(),
         teams: await repo.listTeams(),
         customSets: await loadCustom(),
-        settings: await readSettings(),
+        settings: exported,
       }
       return JSON.stringify(file, null, 2)
     },
@@ -289,6 +293,12 @@ export function createRepository(backend: Backend): Repository {
       if (settings) {
         if (settings.activeTeamUid && !existingTeams.has(settings.activeTeamUid))
           delete settings.activeTeamUid
+        // Device-local state is never taken from a file: importing must not retrigger or reset it.
+        const local = await readSettings()
+        delete settings.supportNudge
+        delete settings.menuSeen
+        if (local.supportNudge) settings.supportNudge = local.supportNudge
+        if (local.menuSeen) settings.menuSeen = local.menuSeen
         await backend.put('settings', SETTINGS_KEY, settings)
       }
       return {
