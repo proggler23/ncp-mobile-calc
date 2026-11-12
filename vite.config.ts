@@ -89,6 +89,11 @@ export default defineConfig(({ mode }) => {
     test: {
       environment: 'jsdom',
       globals: true,
+      // Tests lazy-load the engine and generation data (large JSON/script chunks). On a loaded
+      // machine or CI runner that takes far longer than the 5s/10s defaults, which made the full
+      // suite fail intermittently with "Test/Hook timed out" and "Unable to find ..." errors.
+      testTimeout: 30_000,
+      hookTimeout: 60_000,
       setupFiles: ['./src/test-setup.ts'],
       include: ['src/**/*.test.{ts,tsx}', 'scripts/**/*.test.ts'],
     },

@@ -329,7 +329,7 @@ describe('regulation selection and persistence', () => {
     ).toEqual(['Reg M-C', 'Reg M-B', 'Reg M-A', 'No filter'])
     fireEvent.change(select, { target: { value: 'regmb' } })
     expect(store.get().regulation).toBe('regmb')
-    fireEvent.click(screen.getByRole('button', { name: /Choose my Pokémon/ }))
+    fireEvent.click(await screen.findByRole('button', { name: /Choose my Pokémon/ }))
     const box = await screen.findByRole('searchbox')
     fireEvent.change(box, { target: { value: 'Salamence' } })
     expect(screen.queryByRole('button', { name: /Salamence/ })).toBeNull()
