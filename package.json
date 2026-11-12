@@ -11,15 +11,22 @@
     "typecheck": "tsc -b --noEmit",
     "test": "vitest run",
     "test:e2e": "playwright test",
+    "golden:capture": "node scripts/ncp-golden/capture.mjs",
+    "engine:browser-verify": "node scripts/ncp-golden/browser-verify.mjs",
     "format": "prettier --write .",
-    "build:data": "echo \"build:data placeholder - no data pipeline yet\""
+    "build:data": "tsx scripts/build-data/index.ts",
+    "typecheck:data": "tsc -p scripts/build-data/tsconfig.json"
   },
   "dependencies": {
+    "idb": "^8.0.4",
     "react": "^19.3.1",
-    "react-dom": "^19.3.1"
+    "react-dom": "^19.3.1",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@pkmn/data": "^0.11.0",
+    "@pkmn/dex": "^0.11.0",
     "@playwright/test": "^1.65.0",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
@@ -30,9 +37,11 @@
     "eslint": "^10.14.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react-hooks": "^7.1.1",
+    "fake-indexeddb": "^6.2.8",
     "globals": "^17.14.0",
     "jsdom": "^31.0.0",
     "prettier": "^3.10.1",
+    "tsx": "^4.23.15",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.72.2",
     "vite": "^8.3.8",

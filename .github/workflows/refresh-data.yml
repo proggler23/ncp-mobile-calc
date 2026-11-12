@@ -1,12 +1,17 @@
-# Placeholder: weekly data refresh. Will open a PR with updated generated data in a later phase.
+# Weekly data refresh: rebuilds src/data/generated/ from @pkmn/dex, the pokemon-showdown npm
+# package, PokeAPI CSVs (German names) and Smogon usage stats, then opens a PR if anything changed.
 name: Refresh data
 on:
   schedule:
     - cron: '0 6 * * 1'
   workflow_dispatch:
+permissions:
+  contents: write
+  pull-requests: write
 jobs:
   refresh:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -14,4 +19,16 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm run build:data
+      - run: npm run build:data -- --refresh
+      - run: npm run typecheck && npm test
+      - uses: peter-evans/create-pull-request@v7
+        with:
+          branch: chore/refresh-data
+          delete-branch: true
+          add-paths: src/data/generated
+          commit-message: 'chore(data): refresh generated game data'
+          title: 'chore(data): refresh generated game data'
+          body: |
+            Automated weekly refresh of `src/data/generated/` via `npm run build:data`.
+            Sources and versions are recorded in `src/data/generated/sources.json`.
+          labels: data
