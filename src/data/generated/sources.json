@@ -216,6 +216,36 @@
           "url": "https://www.smogon.com/stats/2024-06/chaos/gen9vgc2024regg-1760.json"
         }
       ],
+      "popular": {
+        "regi": {
+          "format": "gen9vgc2025regi",
+          "month": "2025-06",
+          "cutoff": 1760,
+          "battles": 1007669,
+          "url": "https://www.smogon.com/stats/2025-06/chaos/gen9vgc2025regi-1760.json"
+        },
+        "regg": {
+          "format": "gen9vgc2024regg",
+          "month": "2024-06",
+          "cutoff": 1760,
+          "battles": 966806,
+          "url": "https://www.smogon.com/stats/2024-06/chaos/gen9vgc2024regg-1760.json"
+        },
+        "regd": {
+          "format": "gen9vgc2023regulationd",
+          "month": "2023-08",
+          "cutoff": 1760,
+          "battles": 1400483,
+          "url": "https://www.smogon.com/stats/2023-08/chaos/gen9vgc2023regulationd-1760.json"
+        },
+        "regc": {
+          "format": "gen9vgc2023regulationc",
+          "month": "2023-04",
+          "cutoff": 1760,
+          "battles": 1488248,
+          "url": "https://www.smogon.com/stats/2023-04/chaos/gen9vgc2023regulationc-1760.json"
+        }
+      },
       "gaps": [
         "Data is the base Showdown gen9 ruleset (latest DLC); the legal pool of each VGC regulation is in regulations.json (learnsets are not restricted per regulation; pre-DLC regulations may offer moves the species only learns through DLC)."
       ]
@@ -254,6 +284,29 @@
           "url": "https://www.smogon.com/stats/2026-05/chaos/gen9championsvgc2026regma-1760.json"
         }
       ],
+      "popular": {
+        "regmc": {
+          "format": "gen9championsvgc2026regmc",
+          "month": "2026-10",
+          "cutoff": 1760,
+          "battles": 1649648,
+          "url": "https://www.smogon.com/stats/2026-10/chaos/gen9championsvgc2026regmc-1760.json"
+        },
+        "regmb": {
+          "format": "gen9championsvgc2026regmb",
+          "month": "2026-08",
+          "cutoff": 1760,
+          "battles": 1269250,
+          "url": "https://www.smogon.com/stats/2026-08/chaos/gen9championsvgc2026regmb-1760.json"
+        },
+        "regma": {
+          "format": "gen9championsvgc2026regma",
+          "month": "2026-05",
+          "cutoff": 1760,
+          "battles": 3355619,
+          "url": "https://www.smogon.com/stats/2026-05/chaos/gen9championsvgc2026regma-1760.json"
+        }
+      },
       "gaps": [
         "Source is the pokemon-showdown 'champions' mod (legal dex = isNonstandard null, Megas included, 20 PP cap, Mega Stones in items).",
         "Champions uses Stat Points instead of EVs: each point adds +1 to the stat (HP +1 too), 66 points total, max 32 per stat, IVs fixed at 31. In this data the \"evs\" fields of sets hold Stat Points. Verify limits against the Showdown validator when it lands (stat formula is stat + SP + 20; HP +75).",

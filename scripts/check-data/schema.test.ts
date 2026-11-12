@@ -2,7 +2,7 @@
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { countsOf, validateGen, VersionSchema } from './schema'
+import { countsOf, popularCountsOf, validateGen, VersionSchema } from './schema'
 
 const G = path.resolve(import.meta.dirname, '../../src/data/generated')
 const loadReg = (gen: string) =>
@@ -75,5 +75,48 @@ describe('generated data schema', () => {
     const c = countsOf(load('champions'))
     expect(c.species).toBeGreaterThan(300)
     expect(c.sets).toBeGreaterThan(100)
+  })
+
+  describe('popular.json', () => {
+    const loadPop = (gen: string) =>
+      JSON.parse(readFileSync(path.join(G, gen, 'popular.json'), 'utf8'))
+    const full = (gen: string) => ({
+      ...load(gen),
+      regulations: loadReg(gen),
+      popular: loadPop(gen),
+    })
+    it('accepts the committed champions and sv popular data', () => {
+      for (const gen of ['champions', 'sv'])
+        expect(validateGen(gen, full(gen)).errors, gen).toEqual([])
+    })
+    it('rejects structural damage (too many entries, bad percentage) and unknown regulations', () => {
+      const f = full('champions')
+      const inc = f.popular.regs.regmc.species.incineroar
+      inc.moves.push(['fakeout', 1])
+      inc.abilities[0][1] = 150
+      let errors = validateGen('champions', f).errors.join('\n')
+      expect(errors).toContain('popular.json')
+      expect(errors).toContain('<=10')
+      expect(errors).toContain('<=100')
+      const g = full('champions')
+      g.popular.regs.regxx = g.popular.regs.regma
+      errors = validateGen('champions', g).errors.join('\n')
+      expect(errors).toContain('not a regulation')
+    })
+    it('detects dangling and unsorted entries', () => {
+      const f = full('champions')
+      const inc = f.popular.regs.regmc.species.incineroar
+      inc.moves[9] = ['notamove', 0.1]
+      inc.items.reverse()
+      const errors = validateGen('champions', f).errors.join('\n')
+      expect(errors).toContain('move notamove')
+      expect(errors).toContain('items not sorted')
+    })
+    it('counts species per regulation', () => {
+      const c = popularCountsOf(loadPop('champions'))
+      expect(Object.keys(c).sort()).toEqual(['regma', 'regmb', 'regmc'])
+      expect(c.regmc).toBeGreaterThan(150)
+      expect(popularCountsOf(undefined)).toEqual({})
+    })
   })
 })

@@ -115,6 +115,21 @@ export const VersionSchema = z
         ),
       )
       .optional(),
+    popular: z
+      .record(
+        z.string(),
+        z.record(
+          z.string(),
+          z
+            .object({
+              format: z.string().min(1),
+              month: z.string().regex(/^\d{4}-\d{2}$/),
+              cutoff: z.number().int().min(0),
+            })
+            .strict(),
+        ),
+      )
+      .optional(),
     namesSnapshotDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
     builtAt: z.string().min(1),
   })
@@ -149,12 +164,43 @@ export const RegulationsSchema = z
   })
   .strict()
 
+const pct = z.number().gt(0).max(100)
+const natureName = z.string().regex(/^[A-Z][a-z]+$/)
+const usageList = <T extends z.ZodType<string>>(key: T) => z.array(z.tuple([key, pct])).max(10)
+const popularSpecies = z
+  .object({
+    moves: usageList(id),
+    items: usageList(id),
+    abilities: usageList(id),
+    natures: usageList(natureName),
+  })
+  .strict()
+export const PopularSchema = z
+  .object({
+    source: z.literal('smogon'),
+    regs: z.record(
+      id,
+      z
+        .object({
+          format: z.string().min(1),
+          month: z.string().regex(/^\d{4}-\d{2}$/),
+          cutoff: z.number().int().min(0),
+          battles: z.number().int().min(0),
+          species: z.record(id, popularSpecies),
+        })
+        .strict(),
+    ),
+  })
+  .strict()
+
 export type Files = {
   dex: unknown
   learnsets: unknown
   sets: unknown
   /** regulations.json; absent for generations without regulations */
   regulations?: unknown
+  /** popular.json; absent for generations without Smogon regulation stats */
+  popular?: unknown
 }
 
 const fmt = (e: z.ZodError) =>
@@ -255,6 +301,38 @@ export function validateGen(gen: string, f: Files): { errors: string[]; warnings
       }
     }
   }
+  if (f.popular !== undefined) {
+    const pop = PopularSchema.safeParse(f.popular)
+    if (!pop.success) errors.push(`${gen}/popular.json: ${fmt(pop.error)}`)
+    else {
+      const regIds = new Set(
+        (RegulationsSchema.safeParse(f.regulations).data?.regulations ?? []).map((r) => r.id),
+      )
+      for (const [rid, reg] of Object.entries(pop.data.regs)) {
+        const where = `${gen}/popular.json ${rid}`
+        if (!regIds.has(rid)) errors.push(`${where}: not a regulation of ${gen}`)
+        if (!Object.keys(reg.species).length) errors.push(`${where}: no species`)
+        const dangling: string[] = []
+        for (const [sid, p] of Object.entries(reg.species)) {
+          if (!ids.species.has(sid)) dangling.push(`species ${sid}`)
+          for (const [m] of p.moves) if (!ids.moves.has(m)) dangling.push(`${sid} move ${m}`)
+          for (const [i] of p.items) if (!ids.items.has(i)) dangling.push(`${sid} item ${i}`)
+          for (const [a] of p.abilities)
+            if (!ids.abilities.has(a)) dangling.push(`${sid} ability ${a}`)
+          for (const [name, list] of Object.entries(p)) {
+            const sorted = (list as [string, number][]).every(
+              (e, k, arr) => k === 0 || arr[k - 1]![1] >= e[1],
+            )
+            if (!sorted) dangling.push(`${sid} ${name} not sorted by usage`)
+          }
+        }
+        if (dangling.length)
+          errors.push(
+            `${where}: ${dangling.length} bad entr(ies), e.g. ${dangling.slice(0, 3).join('; ')}`,
+          )
+      }
+    }
+  }
   if (bad.length)
     errors.push(`${gen}: ${bad.length} dangling reference(s), e.g. ${bad.slice(0, 5).join('; ')}`)
   if (soft.length)
@@ -281,6 +359,17 @@ export function regulationCountsOf(raw: unknown): Record<string, RegulationCount
 export interface RegulationCounts {
   species: number
   items: number
+}
+
+/** Species with popular data per regulation (`<regulation id>` -> count), for the delta gate. */
+export function popularCountsOf(raw: unknown): Record<string, number> {
+  const regs = (raw as { regs?: Record<string, { species?: Record<string, unknown> }> })?.regs
+  return Object.fromEntries(
+    Object.entries(regs && typeof regs === 'object' ? regs : {}).map(([id, r]) => [
+      id,
+      Object.keys(r?.species ?? {}).length,
+    ]),
+  )
 }
 
 export function countsOf(f: Files) {

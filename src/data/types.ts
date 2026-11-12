@@ -130,6 +130,36 @@ export interface CommonSet {
 /** species id -> up to 3 sets */
 export type SetsFile = Record<string, CommonSet[]>
 
+/** [id, usage percent of the species' total, 1 decimal]; ids are move/item/ability ids or nature names. */
+export type PopularEntry = [id: string, pct: number]
+
+/** Most used moves / items / abilities / natures of one species in one regulation (top 10 each). */
+export interface PopularSpecies {
+  moves: PopularEntry[]
+  items: PopularEntry[]
+  abilities: PopularEntry[]
+  natures: PopularEntry[]
+}
+
+export interface PopularRegulation {
+  /** Smogon stats format id, e.g. gen9championsvgc2026regmc */
+  format: string
+  /** Stats month, YYYY-MM */
+  month: string
+  /** Rating cutoff of the chaos file (1760, or a lower fallback) */
+  cutoff: number
+  battles: number
+  /** species id -> usage lists */
+  species: Record<string, PopularSpecies>
+}
+
+/** generated/<gen>/popular.json (only generations with regulations that have Smogon stats) */
+export interface PopularFile {
+  source: 'smogon'
+  /** regulation id -> usage */
+  regs: Record<string, PopularRegulation>
+}
+
 /** Per-regulation changes to the generation's learnsets (species id -> move ids). */
 export interface LearnsetDelta {
   add?: Record<string, string[]>
@@ -173,4 +203,6 @@ export interface GenData extends DexFile {
   regulations: RegulationRecord[]
   /** Lazily loaded (separate chunk). */
   loadSets: () => Promise<SetsFile>
+  /** Lazily loaded (separate chunk); `undefined` when the generation has no popularity data. */
+  loadPopular: () => Promise<PopularFile | undefined>
 }

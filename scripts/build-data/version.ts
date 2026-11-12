@@ -6,7 +6,7 @@
 import { readFile, readdir, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import type { DataVersionInfo } from '../../src/data/version'
-import type { RegulationsFile, SetsFile } from '../../src/data/types'
+import type { PopularFile, RegulationsFile, SetsFile } from '../../src/data/types'
 import { parseUpstreamMd } from '../ncp-sync/upstream-md'
 import { SNAPSHOT_FILE } from './names'
 import type { NamesFile } from './names'
@@ -64,6 +64,24 @@ export async function collectVersion(builtAt: string): Promise<DataVersionInfo> 
       ]),
     )
   }
+  const popular: NonNullable<DataVersionInfo['popular']> = {}
+  for (const d of (await readdir(GENERATED, { withFileTypes: true })).filter((e) =>
+    e.isDirectory(),
+  )) {
+    try {
+      const file = JSON.parse(
+        await readFile(path.join(GENERATED, d.name, 'popular.json'), 'utf8'),
+      ) as PopularFile
+      popular[d.name] = Object.fromEntries(
+        Object.entries(file.regs).map(([id, r]) => [
+          id,
+          { format: r.format, month: r.month, cutoff: r.cutoff },
+        ]),
+      )
+    } catch {
+      /* generation without popular data */
+    }
+  }
   return {
     ncpSha: up.sha,
     ncpSyncedAt: up.syncedAt,
@@ -74,6 +92,7 @@ export async function collectVersion(builtAt: string): Promise<DataVersionInfo> 
     regulations: Object.fromEntries(
       Object.entries(regulations).sort(([a], [b]) => (a < b ? -1 : 1)),
     ),
+    popular: Object.fromEntries(Object.entries(popular).sort(([a], [b]) => (a < b ? -1 : 1))),
     namesSnapshotDate: names.meta?.date ?? '',
     builtAt,
   }
