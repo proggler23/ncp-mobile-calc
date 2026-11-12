@@ -79,7 +79,7 @@ export default defineConfig(({ mode }) => {
           // the runtime cache below.
           globIgnores: [
             // Only link-preview crawlers fetch the Open Graph image; the app never needs it offline.
-            'og-image.png',
+            'og-image-v2.jpg',
             `assets/gendata-!(${PRECACHED_GEN})-*`,
             `assets/genmap-!(${PRECACHED_GEN})-*`,
           ],

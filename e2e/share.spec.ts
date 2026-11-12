@@ -138,18 +138,28 @@ test('link preview: Open Graph / Twitter tags and a 1200x630 image', async ({ pa
   const meta = (sel: string) => page.locator(`meta[${sel}]`).getAttribute('content')
   expect(await meta('property="og:title"')).toBe('NCP Mobile Calc – VGC Damage Calculator')
   expect(await meta('property="og:description"')).toBe(
-    'Mobile-friendly VGC damage calculator (NCP engine): Champions, S/V and all gens. Works offline.',
+    'Mobile VGC Damage Calc · Champions, S/V & alle Gens · offline · Calcs teilen',
+  )
+  expect(await meta('name="twitter:description"')).toBe(
+    'Mobile VGC Damage Calc · Champions, S/V & alle Gens · offline · Calcs teilen',
   )
   expect(await meta('property="og:type"')).toBe('website')
   expect(await meta('property="og:url"')).toMatch(/^https:\/\/.+\/$/)
-  expect(await meta('property="og:image"')).toMatch(/^https:\/\/.+\/og-image\.png$/)
+  expect(await meta('property="og:image"')).toMatch(/^https:\/\/.+\/og-image-v2\.jpg$/)
+  expect(await meta('name="twitter:image"')).toMatch(/^https:\/\/.+\/og-image-v2\.jpg$/)
+  expect(await meta('property="og:image:type"')).toBe('image/jpeg')
   expect(await meta('name="twitter:card"')).toBe('summary_large_image')
   expect(await meta('name="theme-color"')).toBeTruthy()
 
-  const res = await request.get('/og-image.png')
+  const res = await request.get('/og-image-v2.jpg')
   expect(res.ok()).toBe(true)
-  const png = await res.body()
-  expect(png.subarray(1, 4).toString()).toBe('PNG')
-  expect([png.readUInt32BE(16), png.readUInt32BE(20)]).toEqual([1200, 630])
-  expect(png.length).toBeLessThan(300 * 1024)
+  expect(res.headers()['content-type']).toContain('image/jpeg')
+  const jpg = await res.body()
+  expect([jpg[0], jpg[1]]).toEqual([0xff, 0xd8])
+  // size from the SOF0/SOF2 marker
+  let o = 2
+  while (o < jpg.length && !(jpg[o] === 0xff && (jpg[o + 1] === 0xc0 || jpg[o + 1] === 0xc2)))
+    o += 2 + jpg.readUInt16BE(o + 2)
+  expect([jpg.readUInt16BE(o + 7), jpg.readUInt16BE(o + 5)]).toEqual([1200, 630])
+  expect(jpg.length).toBeLessThan(300 * 1024)
 })

@@ -20,6 +20,7 @@
     "build:assets": "npm run build:data && npm run build:bridge",
     "typecheck:bridge": "tsc -p scripts/build-bridge/tsconfig.json",
     "build:version": "tsx scripts/build-data/version.ts",
+    "og:image": "node scripts/generate-og-image.mjs",
     "typecheck:scripts": "tsc -p scripts/tsconfig.json",
     "check:data": "tsx scripts/check-data/index.ts",
     "check:generated": "tsx scripts/check-data/generated.ts",

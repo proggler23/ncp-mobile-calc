@@ -104,8 +104,11 @@ Key points:
   Undo snapshot (in memory only) and is shown by `ShareNotice` for 8 s.
 - **Preview:** `index.html` carries Open Graph / Twitter tags. `__SITE_URL__` is replaced at build
   time from `VITE_SITE_URL` (default `https://proggler23.github.io/ncp-mobile-calc/`). The image
-  `public/og-image.png` (1200x630, ~60 KB) comes from `scripts/generate-og-image.mjs` and is excluded
-  from the service worker precache (only crawlers fetch it).
+  `public/og-image-v2.jpg` (1200x630 JPEG, ~85 KB) is a promo image with a real screenshot of the
+  app (German UI, Reg. M-C, Sneasler vs Incineroar, engine numbers). `npm run og:image` rebuilds the
+  app, screenshots `vite preview` with Playwright and composes the picture
+  (`scripts/generate-og-image.mjs`). It is excluded from the service worker precache (only crawlers
+  fetch it); the file name carries a version so chat apps refetch it after a change.
 
 ## Generated data and provenance
 
