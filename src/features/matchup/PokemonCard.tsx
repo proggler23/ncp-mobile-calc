@@ -10,6 +10,7 @@ import { setCardCollapsed, updateSet } from '../../state/app'
 import { investmentOf, STAT_ORDER, statLimits } from '../../state/sets'
 import type { Side } from '../../state/app'
 import { LegalIcon, legalText } from '../regulation/LegalBadge'
+import { SavedSetsButton, SavedSetsSheet } from './SavedSets'
 
 interface Props {
   side: Side
@@ -109,6 +110,7 @@ export function PokemonCard({ side, gen, set, onSearch, onEdit }: Props) {
   const regulation = useApp((s) => s.regulation)
   const collapsed = useApp((s) => s.layout.cardsCollapsed[side])
   const [legalOpen, setLegalOpen] = useState(false)
+  const [savedOpen, setSavedOpen] = useState(false)
   const role = t(side === 'mine' ? 'card.mine' : 'card.opp')
 
   if (!set) {
@@ -235,6 +237,12 @@ export function PokemonCard({ side, gen, set, onSearch, onEdit }: Props) {
               ))}
             </p>
           )}
+        </>
+      )}
+      {side === 'mine' && (
+        <>
+          <SavedSetsButton side="mine" className="card__saved" onOpen={() => setSavedOpen(true)} />
+          {savedOpen && <SavedSetsSheet side="mine" onClose={() => setSavedOpen(false)} />}
         </>
       )}
     </article>

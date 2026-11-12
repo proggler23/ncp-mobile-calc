@@ -635,17 +635,52 @@ export function savedToSet(m: SavedSet): SavedSetLike {
   return rest
 }
 
-/** Use one of the user's saved sets for the opponent. */
-export function applyCustomSet(cs: CustomSet): void {
+/**
+ * Battle state that survives loading a saved set: HP, status, boosts, Terastallization /
+ * Dynamax state. Set-bound parts are only kept while they still apply: Terastallized needs a Tera
+ * type, "ability active" needs the same ability, and a move override (index-aligned) stays only
+ * when the very same move sits in the same slot.
+ */
+export function carryBattleState(old: SavedSetLike, next: SavedSetLike): SavedSetLike {
+  const out: SavedSetLike = { ...next }
+  if (old.status !== undefined) out.status = old.status
+  if (old.boosts !== undefined) out.boosts = { ...old.boosts }
+  if (old.percentHP !== undefined) out.percentHP = old.percentHP
+  if (old.curHP !== undefined) out.curHP = old.curHP
+  if (old.dynamax !== undefined) out.dynamax = old.dynamax
+  if (old.gmax !== undefined) out.gmax = old.gmax
+  if (old.terastallized && next.teraType) out.terastallized = true
+  if (old.abilityOn !== undefined && old.abilityId === next.abilityId) out.abilityOn = old.abilityOn
+  const overrides = next.moveIds.map((id, i) =>
+    old.moveIds[i] === id ? old.moveOverrides?.[i] : undefined,
+  )
+  if (overrides.some(Boolean)) out.moveOverrides = overrides
+  else delete out.moveOverrides
+  return out
+}
+
+/**
+ * Load one of the user's saved sets into a side: replaces the build (nature, ability, item, moves,
+ * spread, Tera type, level) but keeps the battle state (see `carryBattleState`). A team-sourced
+ * "mine" keeps its slot index: the team itself only changes on "Save to team".
+ */
+export function applyCustomSet(side: Side, cs: CustomSet): void {
   const cur = store.get()
   if (cs.gen !== cur.gen) return
-  ++tokens.opp
-  commit({
-    opp: { speciesId: cs.speciesId, ...structuredClone(cs.set) },
-    oppPreset: null,
-    lastChanged: 'opp',
-  })
-  void refreshCommon()
+  const old = cur[side]
+  const built: SavedSetLike = { speciesId: cs.speciesId, ...structuredClone(cs.set) }
+  const next = old ? carryBattleState(old, built) : built
+  ++tokens[side]
+  if (side === 'opp') {
+    commit({ opp: next, oppPreset: null, lastChanged: 'opp' })
+    void refreshCommon()
+  } else {
+    commit({
+      mine: next,
+      lastChanged: 'mine',
+      ...(old && old.speciesId !== cs.speciesId ? { mineTeamIndex: undefined } : {}),
+    })
+  }
 }
 
 export async function applyOppPreset(preset: PresetId): Promise<void> {

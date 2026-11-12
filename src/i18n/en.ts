@@ -380,6 +380,8 @@ export const en = {
   'ed.setName': 'Set name',
   'ed.setSaved': 'Saved set “{name}”.',
   'ed.battleNote': 'Boosts, status and HP are not saved.',
+  'ed.loadSet': 'Load set…',
+  'ed.noSavedSets': 'No saved sets',
   'preset.saved': 'Saved',
   'res.toggle': 'Collapse/expand results',
   'res.summaryNone': 'No damaging move',

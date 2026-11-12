@@ -189,7 +189,7 @@ describe('stale async results', () => {
     const restore = stubBridge({ loadCommonSets: () => slow.promise })
     try {
       const pick = pickSpecies('opp', 'incineroar')
-      applyCustomSet(customSet('garchomp'))
+      applyCustomSet('opp', customSet('garchomp'))
       slow.resolve(undefined)
       await pick
       expect(store.get().opp?.speciesId).toBe('garchomp')

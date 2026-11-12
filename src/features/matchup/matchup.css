@@ -269,10 +269,16 @@
 
 /* ⇅ sits in the gap between the cards and overlaps both edges; the circle is smaller than the
    44px target around it */
+.pair__opp {
+  position: relative;
+  display: grid;
+}
+
+/* centred on the gap above the opponent card (the saved-sets row may sit above it) */
 .swap {
   position: absolute;
   z-index: 2;
-  top: 50%;
+  top: -0.1875rem;
   left: 50%;
   width: var(--tap);
   height: var(--tap);
@@ -672,4 +678,28 @@
   justify-content: flex-start;
   min-height: var(--tap);
   text-align: left;
+}
+
+/* left of the swap button, which sits centred on the border to the opponent card */
+.card__saved {
+  width: auto;
+  justify-self: start;
+  max-width: calc(50% - var(--tap) / 2 - 0.25rem);
+  min-height: var(--tap);
+  margin-top: 0.125rem;
+  padding-inline: 0.5rem;
+  overflow: hidden;
+  font-size: 0.8125rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.saved-row__summary {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.saved-row__warn {
+  color: var(--warn, #d9a400);
 }

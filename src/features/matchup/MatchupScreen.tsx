@@ -40,25 +40,27 @@ export default function MatchupScreen() {
             onSearch={() => setSearch('mine')}
             onEdit={() => setSheet('mine')}
           />
-          <button
-            type="button"
-            className="swap"
-            aria-label={t('swap')}
-            title={t('swap')}
-            onClick={swapSides}
-            disabled={!mine && !opp}
-          >
-            <span className="swap__icon" aria-hidden="true">
-              ⇅
-            </span>
-          </button>
-          <PokemonCard
-            side="opp"
-            gen={gen}
-            set={opp}
-            onSearch={() => setSearch('opp')}
-            onEdit={() => setSheet('opp')}
-          />
+          <div className="pair__opp">
+            <button
+              type="button"
+              className="swap"
+              aria-label={t('swap')}
+              title={t('swap')}
+              onClick={swapSides}
+              disabled={!mine && !opp}
+            >
+              <span className="swap__icon" aria-hidden="true">
+                ⇅
+              </span>
+            </button>
+            <PokemonCard
+              side="opp"
+              gen={gen}
+              set={opp}
+              onSearch={() => setSearch('opp')}
+              onEdit={() => setSheet('opp')}
+            />
+          </div>
         </div>
         <PresetRow />
       </div>

@@ -385,6 +385,8 @@ export const de: Dict = {
   'ed.setName': 'Name des Sets',
   'ed.setSaved': 'Set „{name}“ gespeichert.',
   'ed.battleNote': 'Boosts, Status und KP werden nicht gespeichert.',
+  'ed.loadSet': 'Set laden…',
+  'ed.noSavedSets': 'Keine gespeicherten Sets',
   'preset.saved': 'Gespeichert',
   'res.toggle': 'Ergebnisse ein-/ausklappen',
   'res.summaryNone': 'Keine Schadensattacke',

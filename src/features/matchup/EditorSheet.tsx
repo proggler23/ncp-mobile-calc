@@ -8,9 +8,10 @@ import { LIMITS, type Team } from '../../storage/types'
 import { Dialog } from '../../ui/Dialog'
 import { NameDialog } from '../../ui/prompts'
 import { PokemonEditor } from '../editor/PokemonEditor'
+import { SavedSetsSheet, useSavedSets } from './SavedSets'
 
 type Msg = { kind: 'ok' | 'error'; text: string }
-type Sub = 'team' | 'newTeam' | 'set' | null
+type Sub = 'team' | 'newTeam' | 'set' | 'load' | null
 
 /** Chooser for "Save to team" when the build did not come from a team slot. */
 function TeamChooser({
@@ -60,6 +61,7 @@ export function EditorSheet({ side, onClose }: { side: Side; onClose: () => void
   const index = useApp((s) => s.mineTeamIndex)
   const [sub, setSub] = useState<Sub>(null)
   const [msg, setMsg] = useState<Msg>()
+  const saved = useSavedSets(side)
   const calcResult = useApp((s) => s.calc?.result)
   const sideStats = side === 'mine' ? calcResult?.attackerStats : calcResult?.defenderStats
   if (!set) return null
@@ -124,11 +126,20 @@ export function EditorSheet({ side, onClose }: { side: Side; onClose: () => void
         <button type="button" className="btn" onClick={() => setSub('set')}>
           {t('ed.saveSet')}
         </button>
+        <button
+          type="button"
+          className="btn"
+          disabled={saved.length === 0}
+          onClick={() => setSub('load')}
+        >
+          {saved.length === 0 ? t('ed.noSavedSets') : t('ed.loadSet')}
+        </button>
         <button type="button" className="btn btn--primary" onClick={onClose}>
           {t('common.done')}
         </button>
       </div>
 
+      {sub === 'load' && <SavedSetsSheet side={side} onClose={() => setSub(null)} />}
       {sub === 'team' && (
         <TeamChooser
           teams={choices}
