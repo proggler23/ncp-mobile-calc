@@ -1,3 +1,4 @@
+import { safeDetail } from './detail'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { GEN_META } from '../bridge/gens'
 import type { SavedSetLike } from '../bridge/types'
@@ -283,6 +284,61 @@ describe('malicious input', () => {
     ]) {
       expect(await decodeShare(await wire(w))).toMatchObject({ ok: false })
     }
+  })
+
+  it('bounds move overrides to the UI / NCP ranges and allowlists type and pledge', async () => {
+    const run = async (o: unknown) => {
+      const res = await decodeShare(
+        await wire(['sv', 0, 'd', 0, [...set1, 0, null, null, { o: [o] }], set1]),
+      )
+      if (!res.ok) throw new Error(res.reason)
+      return res
+    }
+    const ok = await run({
+      bp: 999,
+      hits: 10,
+      timesAffected: 10,
+      opponentMoveIndex: 3,
+      type: 'Fire',
+      pledge: 'Fire Pledge',
+    })
+    expect(ok.payload.mine?.moveOverrides?.[0]).toEqual({
+      bp: 999,
+      hits: 10,
+      timesAffected: 10,
+      opponentMoveIndex: 3,
+      type: 'Fire',
+      pledge: 'Fire Pledge',
+    })
+    for (const bad of [
+      { hits: 100000 },
+      { hits: 0 },
+      { bp: 1000 },
+      { bp: -1 },
+      { timesAffected: 11 },
+      { opponentMoveIndex: 4 },
+      { hits: 2.5 },
+      { type: 'Lava' },
+      { pledge: 'Tackle' },
+    ]) {
+      const res = await run(bad)
+      expect(res.payload.mine).toBeUndefined()
+      expect(res.warnings).toContainEqual({ key: 'set', detail: 'mine' })
+    }
+  })
+
+  it('never shows attacker-chosen warning text verbatim', async () => {
+    const evil = 'visit evil.com/x?y'
+    const res = await decodeShare(
+      await wire(['sv', 0, 'd', { w: evil, t: '<b>x</b>', a: [evil] }, set1, set1]),
+    )
+    if (!res.ok) throw new Error(res.reason)
+    const details = res.warnings.map((w) => w.detail ?? '')
+    expect(details.length).toBeGreaterThanOrEqual(3)
+    for (const d of details) expect(d).toMatch(/^[A-Za-z0-9 _.-]{0,32}$|^\?$/)
+    expect(JSON.stringify(res.warnings)).not.toContain('evil.com')
+    expect(safeDetail('Lava')).toBe('Lava')
+    expect(safeDetail(evil)).toBe('?')
   })
 
   it('drops invalid builds with a warning and keeps the valid side', async () => {

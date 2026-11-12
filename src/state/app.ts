@@ -236,10 +236,38 @@ async function boot(): Promise<void> {
     regulation: getLib().bridge.resolveRegulationId(gen, regulations[gen]),
     ...saved,
   })
+  if (store.get().calcError && (saved.mine || saved.opp)) await discardBrokenMatchup(gen)
   const { team, mine } = store.get()
   if (!mine && team && team.gen === gen && team.members.length > 0) selectTeamMember(0)
   if (store.get().opp) void refreshCommon()
   seen = snapshotKey(store.get())
+}
+
+/**
+ * The restored matchup makes the engine throw (corrupt or hostile data that got persisted):
+ * start this generation from a blank matchup and overwrite the stored one, so the next reload
+ * does not hit the same failure again.
+ */
+async function discardBrokenMatchup(gen: DataGenId): Promise<void> {
+  console.warn('The saved matchup could not be calculated; starting from a blank matchup instead')
+  commit({
+    mine: undefined,
+    opp: undefined,
+    mineTeamIndex: undefined,
+    oppPreset: null,
+    field: emptyField(),
+  })
+  try {
+    await (
+      await getRepository()
+    ).setMatchup(gen, {
+      field: emptyField() as unknown as Record<string, unknown>,
+      oppPreset: null,
+      savedAt: Date.now(),
+    })
+  } catch {
+    /* storage unavailable: nothing persisted either */
+  }
 }
 
 function bootFailed(e: unknown): void {
@@ -736,9 +764,24 @@ export async function applyMatchupSnapshot(
   return 'ok'
 }
 
+/** What the loaded-notice was shown for; the notice (and its Undo) lasts until this changes. */
+function noticeRefs(s: AppState): unknown[] {
+  return [s.gen, s.format, s.mine, s.opp, s.field]
+}
+let loadedRefs: unknown[] = []
+
 export function setShareNotice(shareNotice: ShareNotice | undefined): void {
+  if (shareNotice?.kind === 'loaded') loadedRefs = noticeRefs(store.get())
   store.set({ shareNotice })
 }
+
+// The loaded-notice stays until dismissed or until the user makes their next change to the matchup.
+store.subscribe(() => {
+  const s = store.get()
+  if (s.shareNotice?.kind !== 'loaded') return
+  const next = noticeRefs(s)
+  if (next.some((v, i) => v !== loadedRefs[i])) store.set({ shareNotice: undefined })
+})
 
 export function setFocusMove(focus: { direction: Direction; index: number } | undefined): void {
   store.set({ focusMove: focus && { ...focus, nonce: (store.get().focusMove?.nonce ?? 0) + 1 } })

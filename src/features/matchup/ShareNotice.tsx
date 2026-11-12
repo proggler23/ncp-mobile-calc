@@ -2,20 +2,22 @@ import { useEffect } from 'react'
 import type { Key } from '../../i18n'
 import { setShareNotice } from '../../state/app'
 import { useApp, useT } from '../../state/hooks'
+import { safeDetail } from '../../share/detail'
 import { undoSharedLoad } from '../../state/share'
 
+/** Error notices hide themselves; the loaded notice stays (Undo) until dismissed or the next edit. */
 export const SHARE_NOTICE_MS = 8000
 
 /** Non-blocking notice after opening a shared link: loaded + Undo (+ what was skipped), or error. */
 export function ShareNotice() {
   const t = useT()
   const notice = useApp((s) => s.shareNotice)
-  const id = notice?.kind === 'loaded' ? notice.id : notice ? -1 : 0
+  const error = notice?.kind === 'error' ? notice : undefined
   useEffect(() => {
-    if (!id) return
+    if (!error) return
     const timer = setTimeout(() => setShareNotice(undefined), SHARE_NOTICE_MS)
     return () => clearTimeout(timer)
-  }, [id])
+  }, [error])
   if (!notice) return null
   const dismiss = () => setShareNotice(undefined)
 
@@ -44,7 +46,7 @@ export function ShareNotice() {
           <ul>
             {notice.warnings.slice(0, 8).map((w, i) => (
               <li key={i}>
-                {t(`share.warn.${w.key}` as Key, { detail: w.detail ?? '' }).replace(
+                {t(`share.warn.${w.key}` as Key, { detail: safeDetail(w.detail ?? '') }).replace(
                   /\s*\(\)$/,
                   '',
                 )}

@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { GEN_IDS } from '../data/types'
-import { LIMITS, NATURE_NAMES } from './types'
+import { LIMITS, NATURE_NAMES, TYPE_NAMES } from './types'
 import type { CustomSet, SavedSet, Settings, StoredMatchup, Team } from './types'
 
 const id = z.string().min(1).max(LIMITS.maxIdLength)
@@ -134,21 +134,28 @@ export const settingsSchema = z.object({
     .catch(undefined),
 })
 
-const small = z.number().int().min(-1000).max(100_000)
+/**
+ * Move override bounds mirror what the UI / NCP offer, so a shared link or a backup can't push
+ * the engine out of range: bp is NCP's `bounds['move-bp']` (0..999); hits is the largest NCP
+ * multi-hit range (Population Bomb, 10); timesAffected (Rage Fist / Last Respects) stays well
+ * under 10; the opponent-move select lists at most the opponent's 4 moves.
+ */
+export const OVERRIDE_MAX = { bp: 999, hits: 10, timesAffected: 10, opponentMoveIndex: 3 } as const
+export const PLEDGE_MOVES = ['Fire Pledge', 'Grass Pledge', 'Water Pledge'] as const
 const moveOverride = z
   .object({
-    bp: small.optional(),
-    type: z.string().max(24).optional(),
+    bp: z.number().int().min(0).max(OVERRIDE_MAX.bp).optional(),
+    type: z.enum(TYPE_NAMES).optional(),
     category: z.enum(['Physical', 'Special', 'Status']).optional(),
     crit: z.boolean().optional(),
-    hits: small.optional(),
+    hits: z.number().int().min(1).max(OVERRIDE_MAX.hits).optional(),
     double: z.boolean().optional(),
     z: z.boolean().optional(),
     plus: z.boolean().optional(),
     stellar: z.boolean().optional(),
-    pledge: z.string().max(24).optional(),
-    timesAffected: small.optional(),
-    opponentMoveIndex: small.optional(),
+    pledge: z.enum(PLEDGE_MOVES).optional(),
+    timesAffected: z.number().int().min(0).max(OVERRIDE_MAX.timesAffected).optional(),
+    opponentMoveIndex: z.number().int().min(0).max(OVERRIDE_MAX.opponentMoveIndex).optional(),
   })
   .nullable()
 

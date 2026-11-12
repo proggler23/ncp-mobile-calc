@@ -4,6 +4,7 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 import { readFileSync } from 'node:fs'
 import { normalizeBase } from './scripts/vite-base.ts'
+import { injectSiteUrl, normalizeSiteUrl } from './scripts/site-url.ts'
 
 /** The generation whose data ships in the precache (the current VGC format). */
 const PRECACHED_GEN = 'champions'
@@ -18,10 +19,7 @@ const DEFAULT_SITE_URL = 'https://proggler23.github.io/ncp-mobile-calc/'
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   const base = normalizeBase(env.VITE_BASE || process.env.VITE_BASE)
-  const siteUrl = (env.VITE_SITE_URL || process.env.VITE_SITE_URL || DEFAULT_SITE_URL).replace(
-    /\/*$/,
-    '/',
-  )
+  const siteUrl = normalizeSiteUrl(env.VITE_SITE_URL || process.env.VITE_SITE_URL, DEFAULT_SITE_URL)
   return {
     base,
     define: { __APP_VERSION__: JSON.stringify(pkg.version) },
@@ -48,7 +46,7 @@ export default defineConfig(({ mode }) => {
       react(),
       {
         name: 'site-url',
-        transformIndexHtml: (html: string) => html.replaceAll('__SITE_URL__', siteUrl),
+        transformIndexHtml: (html: string) => injectSiteUrl(html, siteUrl),
       },
       VitePWA({
         registerType: 'autoUpdate',

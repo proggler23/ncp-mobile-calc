@@ -23,6 +23,7 @@ import { GEN_META } from '../bridge/gens'
 import type { DataGenId, MoveOverride, SavedSetLike } from '../bridge/types'
 import { GEN_IDS } from '../data/types'
 import { own } from '../own'
+import { safeDetail } from './detail'
 import { emptyField, SIDE_OPTIONS, type UiField } from '../state/field'
 import { parseMatchupSet } from '../storage/schema'
 import { emptySpread, TYPE_NAMES, type Format, type StatSpread } from '../storage/types'
@@ -299,7 +300,7 @@ function decodeSet(
   if (item !== null && item !== undefined) candidate.itemId = item
   if (tera !== null && tera !== undefined) {
     if ((TYPE_NAMES as readonly unknown[]).includes(tera)) candidate.teraType = tera
-    else warnings.push({ key: 'tera', detail: String(tera).slice(0, 32) })
+    else warnings.push({ key: 'tera', detail: safeDetail(tera) })
   }
   if (gender !== null && gender !== undefined) candidate.gender = gender
   if (isObj(extra)) {
@@ -341,7 +342,7 @@ function readFlags(v: unknown, allowed: readonly string[], warnings: ShareWarnin
     const spikes = typeof k === 'string' ? /^spikes([123])?$/.exec(k) : null
     if (spikes) out.spikes = Number(spikes[1] ?? 1) as 1 | 2 | 3
     else if (typeof k === 'string' && allowed.includes(k)) out[k] = true
-    else warnings.push({ key: 'field', detail: String(k).slice(0, 32) })
+    else warnings.push({ key: 'field', detail: safeDetail(k) })
   }
   return out
 }
@@ -356,12 +357,12 @@ function decodeField(raw: unknown, warnings: ShareWarning[]): UiField {
   if (typeof raw.w === 'string') {
     if (raw.w === '' || (WEATHERS as readonly string[]).includes(raw.w)) {
       f.weather = raw.w as UiField['weather']
-    } else warnings.push({ key: 'field', detail: raw.w.slice(0, 32) })
+    } else warnings.push({ key: 'field', detail: safeDetail(raw.w) })
   }
   if (typeof raw.t === 'string') {
     if (raw.t === '' || (TERRAINS as readonly string[]).includes(raw.t)) {
       f.terrain = raw.t as UiField['terrain']
-    } else warnings.push({ key: 'field', detail: raw.t.slice(0, 32) })
+    } else warnings.push({ key: 'field', detail: safeDetail(raw.t) })
   }
   f.gravity = raw.g === 1 || raw.g === true
   f.neutralizingGas = raw.n === 1 || raw.n === true
@@ -386,7 +387,7 @@ function decodeV1(wire: unknown, warnings: ShareWarning[]): SharePayload | undef
   let regulation = 'none'
   if (reg !== 0 && reg !== undefined && reg !== null) {
     if (typeof reg === 'string' && /^[a-z0-9]{1,64}$/.test(reg)) regulation = reg
-    else warnings.push({ key: 'regulation', detail: String(reg).slice(0, 32) })
+    else warnings.push({ key: 'regulation', detail: safeDetail(reg) })
   }
   const payload: SharePayload = {
     gen: g,

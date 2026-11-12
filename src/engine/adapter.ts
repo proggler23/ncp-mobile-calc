@@ -189,6 +189,11 @@ function defaultHits(range: [number, number], ability: string, item: string, gen
   return hi
 }
 
+/** Last line of defence: the engine never sees an out-of-range number, whatever the caller sent. */
+function clampInt(n: number, lo: number, hi: number): number {
+  return Number.isFinite(n) ? Math.max(lo, Math.min(hi, Math.trunc(n))) : lo
+}
+
 function isPair(v: unknown): v is [number, number] {
   return Array.isArray(v) && v.length === 2
 }
@@ -401,17 +406,17 @@ function fillPokemon(
       moveType = hp.type
       if (hp.bp !== undefined) bp = hp.bp
     }
-    val(`${g} .move-bp`, mv.bp ?? bp)
+    val(`${g} .move-bp`, mv.bp !== undefined ? clampInt(mv.bp, 0, 999) : bp)
     val(`${g} .move-type`, mv.type ?? moveType)
     val(`${g} .move-cat`, mv.category ?? move.category)
     set(`${g} .move-crit`, { checked: mv.crit ?? crit })
-    if (mv.hits !== undefined) hitsVal = mv.hits
+    if (mv.hits !== undefined) hitsVal = clampInt(mv.hits, 1, 10)
     val(`${g} .move-hits`, hitsVal ?? 1)
     set(`${g} .move-z`, { checked: !!mv.z })
     set(`${g} .move-double`, { checked: !!mv.double })
     val(`${g} .move-pledge`, mv.pledge ?? mv.name)
-    val(`${g} .move-linearAddedBP`, mv.timesAffected ?? 0)
-    set(`${g} .move-opponent`, { selectedIndex: mv.opponentMoveIndex ?? 0 })
+    val(`${g} .move-linearAddedBP`, clampInt(mv.timesAffected ?? 0, 0, 10))
+    set(`${g} .move-opponent`, { selectedIndex: clampInt(mv.opponentMoveIndex ?? 0, 0, 3) })
     set(`${g} .move-stellar`, { checked: mv.stellar ?? stellar })
     set(`${g} .move-plus`, { checked: plusFlag })
   }

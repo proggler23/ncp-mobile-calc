@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { detectLang, translate } from '../i18n'
 import {
   initApp,
@@ -206,5 +206,36 @@ describe('stat points', () => {
     set = setInvestment(meta, set, 'hp', 40) // lowering others is not automatic
     expect(investmentTotal(investmentOf(meta, set))).toBe(66)
     expect(computeStats(meta, [108, 130, 95, 80, 85, 102], set).hp).toBeGreaterThan(0)
+  })
+})
+
+describe('restoring a matchup the engine cannot calculate', () => {
+  it('falls back to a blank matchup and overwrites the stored one', async () => {
+    const { getRepository, flushMatchup } = await import('./app')
+    await initApp()
+    await pickSpecies('mine', 'pikachu')
+    await pickSpecies('opp', 'garchomp')
+    await flushMatchup()
+    const gen = store.get().gen
+    resetStore()
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const calc = vi.spyOn(getLib().engine, 'calculate').mockImplementation(() => {
+      throw new Error('boom')
+    })
+    try {
+      await initApp()
+      const s = store.get()
+      expect(s.status).toBe('ready')
+      expect(s.mine).toBeUndefined()
+      expect(s.opp).toBeUndefined()
+      expect(s.calcError).toBeUndefined()
+      expect(warn).toHaveBeenCalled()
+      const stored = await (await getRepository()).getMatchup(gen)
+      expect(stored?.mine).toBeUndefined()
+      expect(stored?.opp).toBeUndefined()
+    } finally {
+      calc.mockRestore()
+      warn.mockRestore()
+    }
   })
 })

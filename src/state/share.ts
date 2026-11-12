@@ -197,6 +197,12 @@ export async function openSharedLink(token: string): Promise<void> {
     })
     if (outcome === 'offline') return fail('offline')
     if (outcome !== 'ok') return fail('data')
+    if (store.get().calcError) {
+      // The linked matchup makes the engine throw: put the previous one back instead of keeping it.
+      console.warn('Shared calc could not be calculated; restoring the previous matchup')
+      await applyMatchupSnapshot(before.gen, () => before)
+      return fail('data')
+    }
     setFocusMove(focus)
     setShareNotice({ kind: 'loaded', id: ++noticeId, warnings, undo: before })
   } catch {

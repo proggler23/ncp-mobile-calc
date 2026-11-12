@@ -1,4 +1,6 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { act, render, screen } from '@testing-library/react'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { SHARE_NOTICE_MS, ShareNotice } from '../features/matchup/ShareNotice'
 import { moveLine } from '../features/matchup/ko'
 import { encodeShare } from '../share/codec'
 import {
@@ -11,6 +13,8 @@ import {
   setDirection,
   setGen,
   setMatchup,
+  setShareNotice,
+  snapshotMatchup,
   setSideFlag,
   store,
   updateSet,
@@ -151,6 +155,53 @@ describe('shared calc flow', () => {
       expect(store.get().gen).toBe('champions')
       setDirection('forward')
     }
+  })
+})
+
+describe('loaded notice and undo', () => {
+  it('stays until dismissed or the next change, so Undo remains available', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout'] })
+    try {
+      await build()
+      const token = await encodeShare(buildSharePayload(store.get()))
+      setMatchup(blankSet('champions', 'pikachu'), blankSet('champions', 'garchomp'))
+      await openSharedLink(token)
+      expect(store.get().shareNotice?.kind).toBe('loaded')
+      render(<ShareNotice />)
+      act(() => void vi.advanceTimersByTime(60_000))
+      expect(screen.getByRole('button', { name: /Undo/ })).toBeInTheDocument()
+      expect(store.get().shareNotice?.kind).toBe('loaded')
+      // the user's next change to the matchup retires it
+      act(() => setSideFlag('mine', 'reflect', true))
+      expect(store.get().shareNotice).toBeUndefined()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('keeps the auto-hide for error notices', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout'] })
+    try {
+      act(() => setShareNotice({ kind: 'error', reason: 'format' }))
+      render(<ShareNotice />)
+      act(() => void vi.advanceTimersByTime(SHARE_NOTICE_MS + 10))
+      expect(store.get().shareNotice).toBeUndefined()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('does not echo attacker text from warnings', async () => {
+    act(() =>
+      setShareNotice({
+        kind: 'loaded',
+        id: 1,
+        undo: snapshotMatchup(),
+        warnings: [{ key: 'field', detail: 'visit evil.com/x?y' }],
+      }),
+    )
+    render(<ShareNotice />)
+    expect(document.body.textContent).not.toContain('evil.com')
   })
 })
 
