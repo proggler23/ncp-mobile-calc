@@ -1,5 +1,6 @@
 import type { DexFile, GenData, GenId, Learnsets, SetsFile } from './types'
 import { GEN_IDS } from './types'
+import { own } from '../own'
 
 export * from './types'
 export * from './normalize'
@@ -69,5 +70,5 @@ export function loadSets(gen: GenId): Promise<SetsFile> {
 
 /** True if `speciesId` can learn `moveId` in this generation's data. */
 export function canLearn(data: Pick<GenData, 'learnsets'>, speciesId: string, moveId: string) {
-  return data.learnsets[speciesId]?.includes(moveId) ?? false
+  return own(data.learnsets, speciesId)?.includes(moveId) ?? false
 }

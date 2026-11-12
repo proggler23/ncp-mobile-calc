@@ -1,9 +1,14 @@
 import { z } from 'zod'
 import { GEN_IDS } from '../data/types'
-import { LIMITS } from './types'
+import { LIMITS, NATURE_NAMES } from './types'
 import type { CustomSet, SavedSet, Settings, StoredMatchup, Team } from './types'
 
 const id = z.string().min(1).max(LIMITS.maxIdLength)
+/** Showdown ids (species, moves, items, abilities): lowercase alphanumerics only. */
+const dexId = z
+  .string()
+  .max(LIMITS.maxIdLength)
+  .regex(/^[a-z0-9]+$/)
 const name = z.string().max(LIMITS.maxNameLength)
 const ts = z.number().int().nonnegative().max(8.64e15)
 
@@ -19,7 +24,11 @@ const spread = (max: number) =>
 
 const total = (s: Record<string, number>) => Object.values(s).reduce((a, b) => a + b, 0)
 
-const evs = spread(LIMITS.maxEv).refine((s) => total(s) <= LIMITS.maxEvTotal, 'EV total too high')
+/**
+ * Per-stat bound only; the total cap depends on the generation (see `refineInvestment`): Awakening
+ * Values (LGPE, gen 7.5) have no 510 total.
+ */
+const evs = spread(LIMITS.maxEv)
 const ivs = spread(31)
 const statPoints = spread(LIMITS.maxStatPoint).refine(
   (s) => total(s) <= LIMITS.maxStatPointTotal,
@@ -28,13 +37,34 @@ const statPoints = spread(LIMITS.maxStatPoint).refine(
 
 const genId = z.enum(GEN_IDS)
 
+/** EV / AV caps of a generation: LGPE: <= 200 per stat, no total; others: <= 510 in total. */
+function investmentError(
+  gen: string | undefined,
+  spreadValue: Record<string, number> | undefined,
+): string | undefined {
+  if (!spreadValue) return undefined
+  if (gen === 'lgpe') {
+    return Object.values(spreadValue).some((v) => v > LIMITS.maxAv) ? 'AV too high' : undefined
+  }
+  return total(spreadValue) > LIMITS.maxEvTotal ? 'EV total too high' : undefined
+}
+
+function refineInvestment(
+  gen: string | undefined,
+  spreadValue: Record<string, number> | undefined,
+  ctx: z.RefinementCtx,
+): void {
+  const message = investmentError(gen, spreadValue)
+  if (message) ctx.addIssue({ code: 'custom', message, path: ['evs'] })
+}
+
 const bodyShape = {
   nickname: name.optional(),
   level: z.number().int().min(1).max(100),
-  nature: z.string().min(1).max(24),
-  abilityId: id.optional(),
-  itemId: id.optional(),
-  moveIds: z.array(id).max(LIMITS.maxMoves),
+  nature: z.enum(NATURE_NAMES),
+  abilityId: dexId.optional(),
+  itemId: dexId.optional(),
+  moveIds: z.array(dexId).max(LIMITS.maxMoves),
   evs,
   ivs,
   statPoints: statPoints.optional(),
@@ -43,12 +73,14 @@ const bodyShape = {
   notes: z.string().max(LIMITS.maxNotesLength).optional(),
 }
 
-export const savedSetSchema = z.object({
-  uid: id,
-  gen: genId,
-  speciesId: id,
-  ...bodyShape,
-})
+export const savedSetSchema = z
+  .object({
+    uid: id,
+    gen: genId,
+    speciesId: dexId,
+    ...bodyShape,
+  })
+  .superRefine((s, ctx) => refineInvestment(s.gen, s.evs, ctx))
 
 export const teamSchema = z.object({
   uid: id,
@@ -59,15 +91,17 @@ export const teamSchema = z.object({
   updatedAt: ts,
 })
 
-export const customSetSchema = z.object({
-  uid: id,
-  name,
-  gen: genId,
-  speciesId: id,
-  set: z.object(bodyShape),
-  createdAt: ts,
-  updatedAt: ts,
-})
+export const customSetSchema = z
+  .object({
+    uid: id,
+    name,
+    gen: genId,
+    speciesId: dexId,
+    set: z.object(bodyShape),
+    createdAt: ts,
+    updatedAt: ts,
+  })
+  .superRefine((s, ctx) => refineInvestment(s.gen, s.set.evs, ctx))
 
 export const settingsSchema = z.object({
   lang: z.enum(['de', 'en']),
@@ -96,8 +130,8 @@ const moveOverride = z
 
 /** A build including its battle state (status, boosts, HP, ...), as held by the matchup screen. */
 const matchupSet = z.object({
-  speciesId: id,
-  moveIds: z.array(id).max(LIMITS.maxMoves),
+  speciesId: dexId,
+  moveIds: z.array(dexId).max(LIMITS.maxMoves),
   level: bodyShape.level.optional(),
   nature: bodyShape.nature.optional(),
   abilityId: bodyShape.abilityId,
@@ -159,7 +193,12 @@ export const matchupSchema = z.object({
     .optional(),
   oppPreset: z.string().max(16).nullable().optional(),
   teamUid: id.optional(),
-  mineTeamIndex: z.number().int().min(0).max(LIMITS.maxMembers).optional(),
+  mineTeamIndex: z
+    .number()
+    .int()
+    .min(0)
+    .max(LIMITS.maxMembers - 1)
+    .optional(),
   savedAt: ts,
 })
 
@@ -178,4 +217,11 @@ export const parseSavedSet: (v: unknown) => SavedSet | undefined = guard(savedSe
 export const parseTeam: (v: unknown) => Team | undefined = guard(teamSchema)
 export const parseCustomSet: (v: unknown) => CustomSet | undefined = guard(customSetSchema)
 export const parseSettings: (v: unknown) => Settings | undefined = guard(settingsSchema)
-export const parseMatchup: (v: unknown) => StoredMatchup | undefined = guard(matchupSchema)
+const guardMatchup = guard(matchupSchema)
+/** `gen` (the generation the matchup belongs to) selects the EV / AV caps. */
+export function parseMatchup(v: unknown, gen?: string): StoredMatchup | undefined {
+  const m = guardMatchup(v)
+  if (!m) return undefined
+  if ([m.mine, m.opp].some((side) => investmentError(gen, side?.evs))) return undefined
+  return m
+}

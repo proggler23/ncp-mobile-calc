@@ -9,6 +9,7 @@ import type { DexEntry, GenData, MoveData, Runtime, StubNode } from './sandbox/l
 import type {
   CalcInput,
   FieldInput,
+  FinalStats,
   GenId,
   MoveInput,
   PokemonInput,
@@ -87,7 +88,34 @@ export interface FillResult {
   defenderMoves: string[]
   attackerMaxHP: number
   defenderMaxHP: number
+  attackerStats: FinalStats
+  defenderStats: FinalStats
   warnings: string[]
+}
+
+/** NCP stat-row key -> our key (gen 1 has the single Special row `sl`). */
+const STAT_ROWS: [string, 'atk' | 'def' | 'spa' | 'spd' | 'spe'][] = [
+  ['at', 'atk'],
+  ['df', 'def'],
+  ['sa', 'spa'],
+  ['sd', 'spd'],
+  ['sp', 'spe'],
+]
+
+/** Reads the `.total` cells NCP's calcHP / calcStat filled (after `fillPokemon`). */
+function readStats(rt: Runtime, scope: Scope): FinalStats {
+  const total = (row: string): number | undefined => {
+    const t = rt.state.cell(scope, `.${row} .total`).text
+    return t === undefined || t === '' ? undefined : Number(t)
+  }
+  const out: FinalStats = { hp: total('hp') ?? 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 }
+  for (const [row, key] of STAT_ROWS) out[key] = total(row) ?? 0
+  const special = total('sl')
+  if (special !== undefined) {
+    out.spa = special
+    out.spd = special
+  }
+  return out
 }
 
 /** Find the dex entry that owns `species` as one of its formes (the UI's base species). */
@@ -183,6 +211,8 @@ export function fillState(rt: Runtime, input: CalcInput): FillResult {
     defenderMoves: [],
     attackerMaxHP: 0,
     defenderMaxHP: 0,
+    attackerStats: { hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 },
+    defenderStats: { hp: 0, atk: 0, def: 0, spa: 0, spd: 0, spe: 0 },
     warnings,
   }
 
@@ -192,6 +222,8 @@ export function fillState(rt: Runtime, input: CalcInput): FillResult {
   result.defenderMoves = defenderMoves
   result.attackerMaxHP = Number(state.cell('p1', '.hp .total').text ?? 0)
   result.defenderMaxHP = Number(state.cell('p2', '.hp .total').text ?? 0)
+  result.attackerStats = readStats(rt, 'p1')
+  result.defenderStats = readStats(rt, 'p2')
 
   fillField(rt, input.field ?? {}, gen, info.singlesOnly || gen === 7.5)
   return result
@@ -243,7 +275,7 @@ function fillPokemon(
   const set = (path: string, patch: Cell): Cell => Object.assign(state.cell(scope, path), patch)
   const val = (path: string, v: unknown) => set(path, { val: v })
   const dex = data.pokedex
-  const entry = dex[p.species]
+  const entry = Object.hasOwn(dex, p.species) ? dex[p.species] : undefined
   if (!entry) throw new InputError(`Unknown species "${p.species}" in gen ${gen}`)
   const base = findBase(dex, p.species)
   const baseEntry = dex[base] ?? entry
@@ -276,7 +308,7 @@ function fillPokemon(
     if (s !== 'hp') val(`.${s} .boost`, p.boosts?.[s] ?? 0)
   }
   const nature = p.nature ?? 'Serious'
-  if (!(nature in data.natures)) throw new InputError(`Unknown nature "${nature}"`)
+  if (!Object.hasOwn(data.natures, nature)) throw new InputError(`Unknown nature "${nature}"`)
   val('.nature', nature)
   val('.friendship', p.friendship ?? 70)
   const poke = stub.$(`#${scope}`) as StubNode
@@ -342,7 +374,9 @@ function fillPokemon(
   for (let i = 0; i < 4; i++) {
     const raw = p.moves[i]
     const mv: MoveInput = typeof raw === 'string' ? { name: raw } : (raw ?? { name: '(No Move)' })
-    const move: MoveData | undefined = data.moves[mv.name]
+    const move: MoveData | undefined = Object.hasOwn(data.moves, mv.name)
+      ? data.moves[mv.name]
+      : undefined
     if (!move) throw new InputError(`Unknown move "${mv.name}" in gen ${gen}`)
     names.push(mv.name)
     const g = `.move${i + 1}`

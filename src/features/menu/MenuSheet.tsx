@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { GEN_DATA_IDS } from '../../bridge/gens'
 import { prefetchGen } from '../../bridge/maps'
+import { markAllDownloaded } from '../../pwa'
 import { getRepository, reloadLibrary, setLang, store } from '../../state/app'
 import { useApp, useT } from '../../state/hooks'
 import { StorageError, errorKey } from '../../state/teams'
@@ -76,6 +77,7 @@ export function MenuSheet({ onClose }: { onClose: () => void }) {
         await prefetchGen(g)
         setProgress({ done: i + 1, total: GEN_DATA_IDS.length })
       }
+      markAllDownloaded()
       setMsg({ kind: 'ok', text: t('menu.downloaded') })
     } catch {
       setMsg({ kind: 'error', text: t('menu.downloadFailed') })

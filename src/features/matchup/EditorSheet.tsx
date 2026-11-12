@@ -60,6 +60,8 @@ export function EditorSheet({ side, onClose }: { side: Side; onClose: () => void
   const index = useApp((s) => s.mineTeamIndex)
   const [sub, setSub] = useState<Sub>(null)
   const [msg, setMsg] = useState<Msg>()
+  const calcResult = useApp((s) => s.calc?.result)
+  const sideStats = side === 'mine' ? calcResult?.attackerStats : calcResult?.defenderStats
   if (!set) return null
 
   const origin = side === 'mine' && team?.gen === gen && index !== undefined ? team : undefined
@@ -97,7 +99,12 @@ export function EditorSheet({ side, onClose }: { side: Side; onClose: () => void
       onClose={onClose}
       closeLabel={t('common.close')}
     >
-      <PokemonEditor gen={gen} value={set} onChange={(next) => updateSet(side, () => next)} />
+      <PokemonEditor
+        gen={gen}
+        value={set}
+        stats={sideStats}
+        onChange={(next) => updateSet(side, () => next)}
+      />
       {msg && (
         <p className={msg.kind === 'ok' ? 'toast' : 'notice notice--error'} role="status">
           {msg.text}

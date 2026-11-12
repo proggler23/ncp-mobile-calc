@@ -196,11 +196,11 @@ export function createRepository(backend: Backend): Repository {
     setSettings: writeSettings,
 
     async getMatchup(gen) {
-      return parseMatchup(await backend.get('settings', `matchup:${gen}`))
+      return parseMatchup(await backend.get('settings', `matchup:${gen}`), gen)
     },
     async setMatchup(gen, value) {
       // Round trip through JSON: drops `undefined` values and rejects anything the schema refuses.
-      const clean = checked(parseMatchup(JSON.parse(JSON.stringify(value))), 'matchup')
+      const clean = checked(parseMatchup(JSON.parse(JSON.stringify(value)), gen), 'matchup')
       await backend.put('settings', `matchup:${gen}`, clean)
     },
 

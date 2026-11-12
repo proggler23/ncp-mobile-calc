@@ -8,24 +8,37 @@ let zaPromise: Promise<void> | null = null
 
 /** Loads the vendored NCP data + engine scripts once (separate lazy chunks) and evaluates them. */
 export function loadCore(): Promise<Runtime> {
-  corePromise ??= (async () => {
-    const [{ DATA_SCRIPTS }, { LOGIC_SCRIPTS }] = await Promise.all([
-      import('./sources/data'),
-      import('./sources/logic'),
-    ])
-    const rt = createSandbox([...DATA_SCRIPTS, ...LOGIC_SCRIPTS], new FormState())
-    core = rt
-    return rt
-  })()
+  if (!corePromise) {
+    const p = (async () => {
+      const [{ DATA_SCRIPTS }, { LOGIC_SCRIPTS }] = await Promise.all([
+        import('./sources/data'),
+        import('./sources/logic'),
+      ])
+      const rt = createSandbox([...DATA_SCRIPTS, ...LOGIC_SCRIPTS], new FormState())
+      core = rt
+      return rt
+    })()
+    corePromise = p
+    // A failed load (e.g. an offline chunk fetch) must not be cached forever: allow a retry.
+    p.catch(() => {
+      if (corePromise === p) corePromise = null
+    })
+  }
   return corePromise
 }
 
 /** Loads the Legends Z-A specific scripts into the running sandbox (once). */
 function loadZA(rt: Runtime): Promise<void> {
-  zaPromise ??= import('./sources/za').then(({ ZA_SCRIPTS }) => {
-    for (const script of ZA_SCRIPTS) rt.evalScript(script)
-    rt.zaLoaded = true
-  })
+  if (!zaPromise) {
+    const p = import('./sources/za').then(({ ZA_SCRIPTS }) => {
+      for (const script of ZA_SCRIPTS) rt.evalScript(script)
+      rt.zaLoaded = true
+    })
+    zaPromise = p
+    p.catch(() => {
+      if (zaPromise === p) zaPromise = null
+    })
+  }
   return zaPromise
 }
 

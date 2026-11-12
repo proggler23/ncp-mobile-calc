@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { GEN_META } from '../../bridge/gens'
 import type { BoostKey, DataGenId, MoveOverride, SavedSetLike } from '../../bridge/types'
-import type { Status } from '../../engine/types'
+import type { FinalStats, Status } from '../../engine/types'
 import type { Key } from '../../i18n'
 import { abilityItems, itemItems, moveItems, speciesItems } from '../../state/catalog'
 import { useApp, useT } from '../../state/hooks'
@@ -12,6 +12,7 @@ import {
   STAT_ORDER,
   changeSpecies,
   computeStats,
+  engineStats,
   investmentOf,
   investmentTotal,
   legalAbilities,
@@ -25,6 +26,7 @@ import { emptySpread } from '../../storage/types'
 import { Field, Segmented, Stepper, Toggle } from '../../ui/controls'
 import { SearchOverlay } from '../../ui/SearchOverlay'
 import './editor.css'
+import { own } from '../../own'
 
 export const TYPES = [
   'Normal',
@@ -70,6 +72,8 @@ export interface PokemonEditorProps {
    * Team editing (Phase 5b) can hide it.
    */
   battleState?: boolean
+  /** Final stats the engine computed for this build (matchup screen); computed on demand if absent. */
+  stats?: FinalStats
 }
 
 /**
@@ -81,6 +85,7 @@ export function PokemonEditor({
   value: set,
   onChange,
   battleState = true,
+  stats,
 }: PokemonEditorProps) {
   const t = useT()
   const lang = useApp((s) => s.lang)
@@ -123,12 +128,14 @@ export function PokemonEditor({
   // ----- stats ---------------------------------------------------------------------------------
   const inv = investmentOf(meta, set)
   const total = investmentTotal(inv)
-  const finals = rec ? computeStats(meta, rec.bs, set) : undefined
+  const engineFinals = useMemo(() => stats ?? engineStats(gen, set), [stats, gen, set])
+  const finals = engineFinals ?? (rec ? computeStats(meta, rec.bs, set) : undefined)
   const unit = t(`unit.${lim.system}` as Key)
   const iv = { ...emptySpread(31), ...set.ivs }
-  const statRows = STAT_ORDER.filter((s) => meta.engineGen !== 1 || s !== 'spd')
+  // Gens 1-2: HP DVs are derived from the others and Special DVs are shared (SpD mirrors SpA).
+  const statRows = STAT_ORDER.filter((s) => meta.engineGen > 2 || (s !== 'hp' && s !== 'spd'))
   const sysLabel = (s: StatKey) =>
-    meta.engineGen === 1 && s === 'spa' ? t('stat.sp') : statLabel(s)
+    meta.engineGen <= 2 && s === 'spa' ? t('stat.sp') : statLabel(s)
 
   const megaForms = (rec?.formes ?? []).map((id) => speciesRecord(gen, id)).filter((r) => r?.isMega)
   const baseRec = rec?.isMega && rec.base ? speciesRecord(gen, rec.base) : undefined
@@ -241,7 +248,7 @@ export function PokemonEditor({
             )
           }
           const ov = set.moveOverrides?.[i]
-          const maxHits = MULTI_HIT_MAX[id]
+          const maxHits = own(MULTI_HIT_MAX, id)
           const mrec = bridge.getBridge(gen).records.moves.get(id)
           const cat = mrec && 'category' in mrec ? mrec.category : undefined
           return (
@@ -321,55 +328,52 @@ export function PokemonEditor({
         )}
         {statRows.map((s) => {
           const label = sysLabel(s)
-          const readOnly = lim.system === 'dvs' && s === 'hp'
           return (
             <div className="statrow" key={s}>
               <span className="statrow__name">{label}</span>
               <span className="statrow__final" aria-label={t('ed.finalStat', { stat: label })}>
                 {finals ? finals[s] : '–'}
               </span>
-              {!readOnly && (
-                <>
-                  <input
-                    className="statrow__slider"
-                    type="range"
-                    min={0}
-                    max={lim.max}
-                    step={lim.step}
-                    value={inv[s]}
-                    aria-label={`${label} ${unit}`}
-                    onChange={(e) => onChange(setInvestment(meta, set, s, Number(e.target.value)))}
-                  />
-                  <Stepper
-                    label={`${label} ${unit}`}
-                    value={inv[s]}
-                    min={0}
-                    max={lim.max}
-                    step={lim.step}
-                    onChange={(v) => onChange(setInvestment(meta, set, s, v))}
-                    decLabel={t('common.decrease', { what: label })}
-                    incLabel={t('common.increase', { what: label })}
-                  />
-                  <span className="statrow__quick">
-                    <button
-                      type="button"
-                      className="btn"
-                      aria-label={`${label} 0`}
-                      onClick={() => onChange(setInvestment(meta, set, s, 0))}
-                    >
-                      0
-                    </button>
-                    <button
-                      type="button"
-                      className="btn"
-                      aria-label={`${label} ${lim.max}`}
-                      onClick={() => onChange(setInvestment(meta, set, s, lim.max))}
-                    >
-                      {lim.max}
-                    </button>
-                  </span>
-                </>
-              )}
+              <>
+                <input
+                  className="statrow__slider"
+                  type="range"
+                  min={0}
+                  max={lim.max}
+                  step={lim.step}
+                  value={inv[s]}
+                  aria-label={`${label} ${unit}`}
+                  onChange={(e) => onChange(setInvestment(meta, set, s, Number(e.target.value)))}
+                />
+                <Stepper
+                  label={`${label} ${unit}`}
+                  value={inv[s]}
+                  min={0}
+                  max={lim.max}
+                  step={lim.step}
+                  onChange={(v) => onChange(setInvestment(meta, set, s, v))}
+                  decLabel={t('common.decrease', { what: label })}
+                  incLabel={t('common.increase', { what: label })}
+                />
+                <span className="statrow__quick">
+                  <button
+                    type="button"
+                    className="btn"
+                    aria-label={`${label} 0`}
+                    onClick={() => onChange(setInvestment(meta, set, s, 0))}
+                  >
+                    0
+                  </button>
+                  <button
+                    type="button"
+                    className="btn"
+                    aria-label={`${label} ${lim.max}`}
+                    onClick={() => onChange(setInvestment(meta, set, s, lim.max))}
+                  >
+                    {lim.max}
+                  </button>
+                </span>
+              </>
             </div>
           )
         })}

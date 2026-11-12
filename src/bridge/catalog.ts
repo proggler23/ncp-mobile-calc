@@ -4,6 +4,7 @@ import { normalizeSearch } from '../data'
 import { entityNames, getBridge, isNatDexOnly, isNcpOnly, isPrimary, type Bridge } from './maps'
 import type { DataGenId, EntityKind } from './types'
 import { hiddenPowerTypeOfMove } from './hidden-power'
+import { own } from '../own'
 
 /** Display name of an entity; falls back to the NCP English name (and English for `de`). */
 export function displayName(gen: DataGenId, kind: EntityKind, id: string, lang: Lang): string {
@@ -96,7 +97,7 @@ export function movesForSpecies(
 
   const rec = b.data.species.find((r) => r.id === speciesId)
   const learnset =
-    b.data.learnsets[speciesId] ?? (rec?.base ? b.data.learnsets[rec.base] : undefined)
+    own(b.data.learnsets, speciesId) ?? (rec?.base ? own(b.data.learnsets, rec.base) : undefined)
   const hits: string[] = []
   if (learnset) {
     for (const id of learnset) if (knownSet.has(id)) hits.push(id)

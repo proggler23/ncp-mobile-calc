@@ -5,6 +5,9 @@ import './ui.css'
 const FOCUSABLE =
   'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), summary, [tabindex]:not([tabindex="-1"])'
 
+/** Number of mounted dialogs; the body scroll lock is on while it is above zero. */
+let openDialogs = 0
+
 interface DialogProps {
   title: string
   onClose: () => void
@@ -43,11 +46,11 @@ export function Dialog({
       const first = autoFocusFirst ? root.querySelector<HTMLElement>('input') : null
       ;(first ?? root).focus({ preventScroll: true })
     }
-    document.body.classList.add('scroll-lock')
+    // StrictMode (mount -> cleanup -> mount) stays balanced: every increment has its decrement.
+    if (++openDialogs === 1) document.body.classList.add('scroll-lock')
     return () => {
-      if (document.querySelectorAll('[role="dialog"]').length <= 1) {
-        document.body.classList.remove('scroll-lock')
-      }
+      openDialogs = Math.max(0, openDialogs - 1)
+      if (openDialogs === 0) document.body.classList.remove('scroll-lock')
       opener?.focus?.({ preventScroll: true })
     }
   }, [autoFocusFirst])

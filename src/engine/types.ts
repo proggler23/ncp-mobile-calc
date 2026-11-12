@@ -225,6 +225,16 @@ export interface MoveResult {
   cooldown?: string
 }
 
+/** Final (battle) stats exactly as the engine computed them (HP doubled while Dynamaxed). */
+export interface FinalStats {
+  hp: number
+  atk: number
+  def: number
+  spa: number
+  spd: number
+  spe: number
+}
+
 export interface CalcResult {
   gen: GenId
   /** Results for the attacker's four move slots (attacker -> defender). */
@@ -233,6 +243,9 @@ export interface CalcResult {
   reverseMoves: MoveResult[]
   attackerMaxHP: number
   defenderMaxHP: number
+  /** Final stats of both sides as computed by NCP (calcHP / calcStat of the generation). */
+  attackerStats: FinalStats
+  defenderStats: FinalStats
   /** Non-fatal input problems that were auto-corrected (unknown item/ability etc.). */
   warnings: string[]
 }

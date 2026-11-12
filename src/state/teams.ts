@@ -5,7 +5,7 @@
  * HP, Tera/Dynamax toggles, move overrides) is stripped by `setToBody`.
  */
 import type { DataGenId, SavedSetLike } from '../bridge/types'
-import type { Key } from '../i18n'
+import { translate, type Key } from '../i18n'
 import {
   StorageError,
   emptySpread,
@@ -67,6 +67,23 @@ async function repo() {
   return getRepository()
 }
 
+/**
+ * Team / custom set mutations are read-modify-write sequences on IndexedDB; two concurrent ones
+ * (double tap, add + edit) would overwrite each other. They are serialized through one promise
+ * chain per repository. Functions running inside the lock must not call locked functions.
+ */
+const chains = new WeakMap<object, Promise<unknown>>()
+async function locked<T>(fn: () => Promise<T>): Promise<T> {
+  const r = await repo()
+  const prev = chains.get(r) ?? Promise.resolve()
+  const run = prev.then(fn)
+  chains.set(
+    r,
+    run.catch(() => undefined),
+  )
+  return run
+}
+
 async function team(uid: string): Promise<Team> {
   const t = await (await repo()).getTeam(uid)
   if (!t) throw new StorageError('Team not found', 'not-found')
@@ -93,43 +110,55 @@ function clearTeamSelection(uid: string): void {
 // Teams
 // ---------------------------------------------------------------------------------------------
 
-export async function createTeam(
-  name: string,
-  gen: DataGenId,
-  members: SavedSet[] = [],
-): Promise<Team> {
+async function createTeamU(name: string, gen: DataGenId, members: SavedSet[]): Promise<Team> {
   const r = await repo()
-  const t = await r.createTeam({ name: name.trim() || 'Team', gen, members })
+  const t = await r.createTeam({
+    name: name.trim() || translate(store.get().lang, 'team.defaultName'),
+    gen,
+    members,
+  })
   if (!store.get().team) await r.setActiveTeam(t.uid)
   await reloadLibrary()
   return t
 }
 
-export async function renameTeam(uid: string, name: string): Promise<void> {
-  await (await repo()).updateTeam(uid, { name: name.trim().slice(0, LIMITS.maxNameLength) })
-  await reloadLibrary()
+export function createTeam(name: string, gen: DataGenId, members: SavedSet[] = []): Promise<Team> {
+  return locked(() => createTeamU(name, gen, members))
 }
 
-export async function deleteTeam(uid: string): Promise<void> {
-  await (await repo()).deleteTeam(uid)
-  const s = store.get()
-  if (s.team?.uid === uid) store.set({ team: undefined, mineTeamIndex: undefined })
-  await reloadLibrary()
+export function renameTeam(uid: string, name: string): Promise<void> {
+  return locked(async () => {
+    await (await repo()).updateTeam(uid, { name: name.trim().slice(0, LIMITS.maxNameLength) })
+    await reloadLibrary()
+  })
 }
 
-export async function duplicateTeam(uid: string, copyLabel: string): Promise<Team> {
-  const src = await team(uid)
-  const members = src.members.map((m) => ({ ...structuredClone(m), uid: newUid() }))
-  const name = `${src.name} ${copyLabel}`.slice(0, LIMITS.maxNameLength)
-  const t = await (await repo()).createTeam({ name, gen: src.gen, members })
-  await reloadLibrary()
-  return t
+export function deleteTeam(uid: string): Promise<void> {
+  return locked(async () => {
+    await (await repo()).deleteTeam(uid)
+    const s = store.get()
+    if (s.team?.uid === uid) store.set({ team: undefined, mineTeamIndex: undefined })
+    await reloadLibrary()
+  })
 }
 
-export async function setActiveTeam(uid: string | undefined): Promise<void> {
-  await (await repo()).setActiveTeam(uid)
-  store.set({ mineTeamIndex: undefined })
-  await reloadLibrary()
+export function duplicateTeam(uid: string, copyLabel: string): Promise<Team> {
+  return locked(async () => {
+    const src = await team(uid)
+    const members = src.members.map((m) => ({ ...structuredClone(m), uid: newUid() }))
+    const name = `${src.name} ${copyLabel}`.slice(0, LIMITS.maxNameLength)
+    const t = await (await repo()).createTeam({ name, gen: src.gen, members })
+    await reloadLibrary()
+    return t
+  })
+}
+
+export function setActiveTeam(uid: string | undefined): Promise<void> {
+  return locked(async () => {
+    await (await repo()).setActiveTeam(uid)
+    store.set({ mineTeamIndex: undefined })
+    await reloadLibrary()
+  })
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -151,17 +180,17 @@ export async function defaultSet(gen: DataGenId, speciesId: string): Promise<Sav
 }
 
 export async function addMember(teamUid: string, speciesId: string): Promise<void> {
-  const t = await team(teamUid)
-  if (t.members.length >= LIMITS.maxMembers) throw new StorageError('Team is full', 'limit')
-  const set = await defaultSet(t.gen, speciesId)
-  await write(teamUid, [...t.members, toMember(t.gen, newUid(), set)])
+  // The (async) default set is computed before taking the lock; the team is read inside it.
+  const gen = (await team(teamUid)).gen
+  const set = await defaultSet(gen, speciesId)
+  await locked(async () => {
+    const t = await team(teamUid)
+    if (t.members.length >= LIMITS.maxMembers) throw new StorageError('Team is full', 'limit')
+    await write(teamUid, [...t.members, toMember(t.gen, newUid(), set)])
+  })
 }
 
-export async function updateMember(
-  teamUid: string,
-  memberUid: string,
-  set: SavedSetLike,
-): Promise<void> {
+async function updateMemberU(teamUid: string, memberUid: string, set: SavedSetLike) {
   const t = await team(teamUid)
   if (!t.members.some((m) => m.uid === memberUid))
     throw new StorageError('Member not found', 'not-found')
@@ -171,36 +200,42 @@ export async function updateMember(
   )
 }
 
-export async function removeMember(teamUid: string, memberUid: string): Promise<void> {
-  const t = await team(teamUid)
-  await write(
-    teamUid,
-    t.members.filter((m) => m.uid !== memberUid),
-  )
+export function updateMember(teamUid: string, memberUid: string, set: SavedSetLike): Promise<void> {
+  return locked(() => updateMemberU(teamUid, memberUid, set))
 }
 
-export async function moveMember(teamUid: string, index: number, delta: -1 | 1): Promise<void> {
-  const t = await team(teamUid)
-  const to = index + delta
-  if (to < 0 || to >= t.members.length || !t.members[index]) return
-  const members = [...t.members]
-  ;[members[index], members[to]] = [members[to]!, members[index]!]
-  await write(teamUid, members)
+export function removeMember(teamUid: string, memberUid: string): Promise<void> {
+  return locked(async () => {
+    const t = await team(teamUid)
+    await write(
+      teamUid,
+      t.members.filter((m) => m.uid !== memberUid),
+    )
+  })
+}
+
+export function moveMember(teamUid: string, index: number, delta: -1 | 1): Promise<void> {
+  return locked(async () => {
+    const t = await team(teamUid)
+    const to = index + delta
+    if (to < 0 || to >= t.members.length || !t.members[index]) return
+    const members = [...t.members]
+    ;[members[index], members[to]] = [members[to]!, members[index]!]
+    await write(teamUid, members)
+  })
 }
 
 /** Save a battle build into a team: updates the member at `index` or appends (when < 6). */
-export async function saveToTeam(
-  teamUid: string,
-  set: SavedSetLike,
-  memberUid?: string,
-): Promise<void> {
-  const t = await team(teamUid)
-  if (memberUid && t.members.some((m) => m.uid === memberUid)) {
-    await updateMember(teamUid, memberUid, set)
-    return
-  }
-  if (t.members.length >= LIMITS.maxMembers) throw new StorageError('Team is full', 'limit')
-  await write(teamUid, [...t.members, toMember(t.gen, newUid(), set)])
+export function saveToTeam(teamUid: string, set: SavedSetLike, memberUid?: string): Promise<void> {
+  return locked(async () => {
+    const t = await team(teamUid)
+    if (memberUid && t.members.some((m) => m.uid === memberUid)) {
+      await updateMemberU(teamUid, memberUid, set)
+      return
+    }
+    if (t.members.length >= LIMITS.maxMembers) throw new StorageError('Team is full', 'limit')
+    await write(teamUid, [...t.members, toMember(t.gen, newUid(), set)])
+  })
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -222,9 +257,10 @@ export async function importPasteAsTeam(
   const data = getLib().bridge.getBridge(gen).data
   const { members, warnings } = importPaste(text, gen, data)
   if (members.length === 0) return { imported: 0, warnings }
-  const t = opts.target
-    ? await write(opts.target, members)
-    : await createTeam(opts.name, gen, members)
+  const target = opts.target
+  const t = await locked(() =>
+    target ? write(target, members) : createTeamU(opts.name, gen, members),
+  )
   return { team: t, imported: members.length, warnings }
 }
 
@@ -236,26 +272,26 @@ export function teamPaste(t: Team): string {
 // Custom sets
 // ---------------------------------------------------------------------------------------------
 
-export async function saveCustomSet(
-  gen: DataGenId,
-  name: string,
-  set: SavedSetLike,
-): Promise<CustomSet> {
-  const cs = await (
-    await repo()
-  ).createCustomSet({
-    name: name.trim().slice(0, LIMITS.maxNameLength) || set.speciesId,
-    gen,
-    speciesId: set.speciesId,
-    set: setToBody(gen, set),
+export function saveCustomSet(gen: DataGenId, name: string, set: SavedSetLike): Promise<CustomSet> {
+  return locked(async () => {
+    const cs = await (
+      await repo()
+    ).createCustomSet({
+      name: name.trim().slice(0, LIMITS.maxNameLength) || set.speciesId,
+      gen,
+      speciesId: set.speciesId,
+      set: setToBody(gen, set),
+    })
+    await reloadLibrary()
+    return cs
   })
-  await reloadLibrary()
-  return cs
 }
 
-export async function deleteCustomSet(uid: string): Promise<void> {
-  await (await repo()).deleteCustomSet(uid)
-  await reloadLibrary()
+export function deleteCustomSet(uid: string): Promise<void> {
+  return locked(async () => {
+    await (await repo()).deleteCustomSet(uid)
+    await reloadLibrary()
+  })
 }
 
 /** Make a team the active one, switching to its generation and selecting its first member. */

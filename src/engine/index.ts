@@ -50,6 +50,8 @@ export function calculate(input: CalcInput): CalcResult {
     reverseMoves: toMoveResults(rt, rev, filled.defenderMoves, filled.attackerMaxHP),
     attackerMaxHP: filled.attackerMaxHP,
     defenderMaxHP: filled.defenderMaxHP,
+    attackerStats: filled.attackerStats,
+    defenderStats: filled.defenderStats,
     warnings: filled.warnings,
   }
 }

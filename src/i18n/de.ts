@@ -256,11 +256,14 @@ export const de: Dict = {
   'err.storage': 'Speicher nicht verfügbar. Deine Änderungen wurden nicht gespeichert.',
   'gen.offline':
     'Generation {gen} ist noch nicht heruntergeladen und du bist offline. Verbinde dich einmal, um sie zu laden; danach funktioniert sie offline.',
+  'gen.redownloadHint':
+    'Hast du Generationen vor einem App-Update offline gespeichert, lade sie einmal online erneut herunter (Menü, Offline-Nutzung).',
   'gen.failed': 'Generation {gen} konnte nicht geladen werden.',
   'top.menu': 'Menü',
   'team.switcher': 'Aktives Team',
   'team.manage': 'Teams verwalten',
   'team.noneActive': 'Kein Team gewählt',
+  'team.defaultName': 'Team',
   'team.optionOtherGen': '{name} ({gen})',
   'teams.title': 'Teams',
   'teams.back': 'Zurück zum Rechner',

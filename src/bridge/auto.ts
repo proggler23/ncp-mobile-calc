@@ -15,6 +15,7 @@
  *    (`autoSetType`); without such an item the type is Normal.
  */
 import type { Status, Terrain, Weather } from '../engine/types'
+import { own } from '../own'
 
 export interface AbilityState {
   abilityId?: string | undefined
@@ -44,14 +45,14 @@ function abilityWeather(engineGen: number, a: AbilityState): Weather | undefined
   if (!id) return undefined
   if (id === 'snowwarning') return engineGen >= 9 ? 'Snow' : 'Hail'
   if (id === 'sandspit') return a.abilityOn ? 'Sand' : undefined
-  return WEATHER[id]
+  return own(WEATHER, id)
 }
 
 function abilityTerrain(a: AbilityState): Terrain | undefined {
   const id = a.abilityId
   if (!id) return undefined
   if (id === 'seedsower') return a.abilityOn ? 'Grassy' : undefined
-  return TERRAIN[id]
+  return own(TERRAIN, id)
 }
 
 export interface AutoField {
@@ -147,7 +148,7 @@ export function typeFromItem(
     return t ? t.charAt(0).toUpperCase() + t.slice(1) : 'Normal'
   }
   if (ncpSpecies === 'Arceus' && (abilityId ?? 'multitype') === 'multitype') {
-    return PLATES[item] ?? Z_CRYSTALS[item] ?? 'Normal'
+    return own(PLATES, item) ?? own(Z_CRYSTALS, item) ?? 'Normal'
   }
   return undefined
 }
