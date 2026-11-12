@@ -179,12 +179,18 @@ async function persist(
     layout: LayoutPrefs
   }>,
 ) {
-  try {
-    await (await getRepository()).setSettings(patch)
-  } catch {
-    /* storage unavailable (private mode): the app still works, just without persistence */
-  }
+  // One write at a time: setSettings merges into the stored settings (read, then write), so two
+  // overlapping writes (gen, then regulation) could drop each other's fields.
+  persistQueue = persistQueue.then(async () => {
+    try {
+      await (await getRepository()).setSettings(patch)
+    } catch {
+      /* storage unavailable (private mode): the app still works, just without persistence */
+    }
+  })
+  await persistQueue
 }
+let persistQueue: Promise<void> = Promise.resolve()
 
 // ---------------------------------------------------------------------------------------------
 // Boot

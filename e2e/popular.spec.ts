@@ -28,7 +28,7 @@ test('Incineroar move picker in Reg M-C: popular section first, Fake Out on top,
     timeout: 30_000,
   })
   await page.setViewportSize({ width: 360, height: 740 })
-  await expect(page.getByLabel('Regulation')).toHaveValue('regmc')
+  await expect(page.getByLabel('Generation and regulation')).toHaveValue('champions:regmc')
   await page.getByRole('button', { name: /Choose opponent/ }).click()
   await page.getByRole('searchbox').fill('Incineroar')
   await page

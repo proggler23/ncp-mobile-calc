@@ -209,7 +209,7 @@
 
 .topbar .seg__item {
   min-height: 40px;
-  min-width: var(--tap);
+  min-width: 2.5rem;
 }
 
 .seg__item[aria-checked='true'] {

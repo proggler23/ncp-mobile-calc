@@ -6,8 +6,8 @@ test('status chip: burn lowers physical damage, no overflow at 360px', async ({ 
   await expect(page.getByRole('button', { name: /Choose my Pokémon/ })).toBeVisible({
     timeout: 30_000,
   })
-  await page.getByLabel('Generation').selectOption('sv')
-  await expect(page.getByLabel('Generation')).toBeEnabled()
+  await page.getByLabel('Generation and regulation').selectOption('sv:regi')
+  await expect(page.getByLabel('Generation and regulation')).toBeEnabled()
   await page.getByRole('button', { name: /Choose my Pokémon/ }).click({ timeout: 30_000 })
   await page.getByRole('searchbox').fill('Incineroar')
   await page

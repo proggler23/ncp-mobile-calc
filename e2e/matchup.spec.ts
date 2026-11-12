@@ -44,8 +44,8 @@ for (const width of [360, 0]) {
     await expect(page.getByRole('button', { name: /Choose my Pokémon/ })).toBeVisible({
       timeout: 30_000,
     })
-    await page.getByLabel('Generation').selectOption('sv')
-    await expect(page.getByLabel('Generation')).toBeEnabled()
+    await page.getByLabel('Generation and regulation').selectOption('sv:regi')
+    await expect(page.getByLabel('Generation and regulation')).toBeEnabled()
     await page.getByRole('button', { name: /Choose my Pokémon/ }).click({ timeout: 30_000 })
 
     // species search: autofocused, no iOS zoom (>= 16px)
