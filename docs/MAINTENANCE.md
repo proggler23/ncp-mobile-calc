@@ -8,10 +8,15 @@ commit; the deploy workflow never downloads anything.
 
 ```
 weekly (Mon 06:00 UTC) / manual           auto-update.yml
+job build-and-check  (read-only token)
   build:data --refresh   (ACTIVE_FORMATS only)
   ncp:sync               (only if upstream main moved: re-vendor, bridge, goldens)
   build:bridge
-  check:data --full      schema + count deltas + bridge coverage + lint/typecheck/test/build
+  check:data --full      schema + count deltas + bridge coverage + vendor checksums
+                         + lint/typecheck/test/build
+  -> artifact: update.patch (allowed paths only) + gate summary
+job publish          (contents + pull-requests write; runs no repository code)
+  applies the patch after checking its paths
         |
         +-- pass     -> bot commit on main -> deploy.yml (called in the same run)
         +-- anomaly  -> PR "needs review" (body = gate summary), nothing pushed to main
@@ -20,9 +25,19 @@ weekly (Mon 06:00 UTC) / manual           auto-update.yml
 
 `deploy.yml` (push to main, manual, or `workflow_call`) runs `npm ci`, `check:generated`
 (generated files present, schema-valid, bridge maps identical to an offline rebuild) and
-`build:offline` (the normal build with outbound network access blocked by
+`check:vendor` and `build:offline` (the normal build with outbound network access blocked by
 `scripts/check-data/block-network.cjs`). `ci.yml` runs lint, typecheck (app + scripts), tests
-(including the golden suite), `check:generated`, `ncp:patches` and `build:offline`.
+(including the golden suite, which also holds the sandbox containment test), `check:generated`,
+`ncp:patches`, `check:vendor` and `build:offline`.
+
+`npm run check:vendor` verifies the sha256 of every file under `vendor/ncp/script_res/` against the
+list in `vendor/ncp/UPSTREAM.md` (and flags missing / unlisted files). Those hashes are of the
+pristine UPSTREAM bytes, so when `vendor/ncp-patches/*.patch` exist the check reverse-applies them
+(last first) on a temporary copy before hashing: patched files pass only if the patch captures every
+local change. A hand edit of a vendored file without a patch fails it.
+
+All third-party actions are pinned to full commit SHAs (`uses: owner/repo@<sha> # vX.Y.Z`);
+Dependabot (github-actions ecosystem) proposes updates. Do not replace them with floating tags.
 
 ## Frozen vs active generations
 
@@ -107,7 +122,7 @@ Roll back the NCP engine the same way (the commit contains vendored files, UPSTR
 
 ## Branch protection and tokens
 
-The update job pushes to `main`. If `main` is protected, give the workflow a token that may bypass
+The publish job pushes to `main`. If `main` is protected, give the workflow a token that may bypass
 it: create a fine-grained PAT (Contents + Pull requests: read/write on this repo) or a GitHub App
 installation token that is allowed to bypass the ruleset, and store it as the repository secret
 **`AUTO_UPDATE_TOKEN`**. The workflow uses it if present, otherwise `GITHUB_TOKEN`.
@@ -116,8 +131,11 @@ Differences: pushes with `GITHUB_TOKEN` do not trigger other workflows, so the u
 `deploy.yml` itself (`workflow_call`); with `AUTO_UPDATE_TOKEN` the push triggers `deploy.yml` and
 `ci.yml` normally and the explicit call is skipped. PRs opened with `GITHUB_TOKEN` do not trigger
 CI either (re-run it from the PR or use the PAT). Also enable _Settings -> Actions -> General ->
-Allow GitHub Actions to create and approve pull requests_. Permissions per job: update =
-`contents: write`, `pull-requests: write`; deploy = `contents: read`, `pages: write`,
+Allow GitHub Actions to create and approve pull requests_. Permissions per job: build-and-check =
+`contents: read` (all downloading, building and testing happens here, with no write token);
+publish = `contents: write`, `pull-requests: write` (only applies the artifact, commits / pushes or
+opens the PR; the artifact patch is rejected if it touches paths outside `UPDATE_PATHS`; the
+`AUTO_UPDATE_TOKEN` PAT is only used by this job); deploy = `contents: read`, `pages: write`,
 `id-token: write`. Runs are serialised by the `auto-update` concurrency group.
 
 ## German names

@@ -187,6 +187,7 @@ function main() {
     checks.push(run('lint', 'npm', ['run', '--silent', 'lint']))
     checks.push(run('typecheck', 'npm', ['run', '--silent', 'typecheck']))
     checks.push(run('typecheck-scripts', 'npm', ['run', '--silent', 'typecheck:scripts']))
+    checks.push(run('vendor checksums', 'npm', ['run', '--silent', 'check:vendor']))
     checks.push(run('test (incl. goldens)', 'npm', ['run', '--silent', 'test']))
     checks.push(run('build (offline)', 'npm', ['run', '--silent', 'build:offline']))
   }
