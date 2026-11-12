@@ -15,7 +15,10 @@
     "engine:browser-verify": "node scripts/ncp-golden/browser-verify.mjs",
     "format": "prettier --write .",
     "build:data": "tsx scripts/build-data/index.ts",
-    "typecheck:data": "tsc -p scripts/build-data/tsconfig.json"
+    "typecheck:data": "tsc -p scripts/build-data/tsconfig.json",
+    "build:bridge": "tsx scripts/build-bridge/index.ts",
+    "build:assets": "npm run build:data && npm run build:bridge",
+    "typecheck:bridge": "tsc -p scripts/build-bridge/tsconfig.json"
   },
   "dependencies": {
     "idb": "^8.0.4",
