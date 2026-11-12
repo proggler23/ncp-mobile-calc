@@ -35,6 +35,8 @@ export default defineConfig(({ mode }) => {
                 id,
               )
             if (data) return `assets/gendata-${data[1]}-${data[2]}-[hash].js`
+            const ids = /\/src\/share\/generated\/ids-([^/]+)\.json/.exec(id)
+            if (ids) return `assets/gendata-${ids[1]}-ids-[hash].js`
             const map = /\/src\/bridge\/generated\/([^/]+)\.json/.exec(id)
             if (map) return `assets/genmap-${map[1]}-[hash].js`
             return 'assets/[name]-[hash].js'
@@ -90,8 +92,8 @@ export default defineConfig(({ mode }) => {
               handler: 'CacheFirst',
               options: {
                 cacheName: 'gen-data-v1',
-                // 11 other generations x 4 chunks, plus room for a few superseded builds.
-                expiration: { maxEntries: 120, maxAgeSeconds: 60 * 60 * 24 * 180 },
+                // 11 other generations x 5 chunks, plus room for a few superseded builds.
+                expiration: { maxEntries: 160, maxAgeSeconds: 60 * 60 * 24 * 180 },
                 cacheableResponse: { statuses: [200] },
               },
             },

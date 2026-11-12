@@ -144,10 +144,12 @@ export default function App() {
     void loadMatchup() // start fetching the screen chunk while settings/data load
     return () => void flushMatchup()
   }, [])
-  // `#/c/<token>`: a shared calc (at start and when a link is opened in the running app).
+  // A shared calc (at start and when a link is opened in the running app): `#c2<data>` (v2) or
+  // `#/c/v1.<data>` (v1).
   useEffect(() => {
     const now = currentRoute()
     if (now.startsWith('c/')) void openSharedLink(now.slice(2))
+    else if (/^c2[A-Za-z0-9_-]/.test(now)) void openSharedLink(now.slice(1))
   }, [route])
   useEffect(() => {
     document.documentElement.lang = lang

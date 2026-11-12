@@ -91,13 +91,33 @@ Key points:
   the generation label for "No filter") - format - field effects (`state/fieldSummary.ts`, shared with
   the field summary), line 3 = the link. Share uses `navigator.share({title, text: lines 1-2, url})`;
   without Web Share the full text is copied. "Copy text" copies lines 1-3, "Copy link" only the link.
-- **Link:** `<origin><BASE_URL>#/c/v1.<payload>`. The payload (`src/share/codec.ts`, pure) is compact
-  positional JSON (defaults omitted; nicknames and notes are never shared), deflate-raw compressed
-  when `CompressionStream` exists, then base64url. `v1r.` marks the uncompressed fallback. Versions
-  are append-only: old links keep decoding through their own decoder.
-- **Opening:** `App` calls `openSharedLink` for `#/c/...` at start and on `hashchange`. The hash is
+- **Link (v2, current):** `<origin><BASE_URL>#c2<data>` (~100 characters for a typical Champions
+  doubles calc). `<data>` is base64url of a bit-packed binary (`src/share/v2.ts`, pure; nicknames and
+  notes are never shared): a header (generation, format, presence bits), then the regulation, the
+  field, both builds and the selected row. Numbers instead of names: species / moves / items /
+  abilities / regulations are positions in **append-only id tables**
+  (`src/share/generated/ids-<gen>.json`, built from the committed dex by `npm run build:share-ids`,
+  loaded lazily per generation by `src/share/ids.ts`, chunk `gendata-<gen>-ids-*`). Code 0 spells
+  the id out inline (ids missing from the table), codes are written with a per-link bit width. Fixed
+  enum tables in `v2.ts` (generations, natures, types, status, weather, terrain, side flags,
+  override category / pledge) are part of the wire format: append only. Defaults are omitted (level
+  50, Serious, IV 31, EV 0, ...); EVs are 6 bits per stat when multiples of 4 (else 8 bits), IVs 5,
+  Stat Points 6, boosts 4, HP in tenths (10 bits; exact float otherwise), overrides with their
+  bounds. The payload is deflate-raw compressed only when that is shorter (first byte `0x80`).
+  Token = `2<data>` (`decodeShare`); max 2048 characters, decompressed <= 2048 bytes.
+- **Id-table stability:** a number must mean the same id forever. `build:share-ids` only appends
+  (ids that left the dex keep their slot). `check:generated` fails when a table is missing, malformed
+  or lacks a dex id; `check:data` (weekly auto-update gate) reports an **anomaly** when an existing
+  mapping differs from the git baseline; the auto-update workflow runs `build:share-ids` and commits
+  `src/share/generated`. `scripts/build-share-ids/tables.test.ts` pins sample numbers.
+- **Link (v1, still decoded):** `<origin><BASE_URL>#/c/v1.<payload>` (compressed positional JSON) and
+  `#/c/v1r.<payload>` (uncompressed fallback). v2 decodes into the same intermediate positional
+  value as v1, so both go through one validation path. Versions are append-only: old links keep
+  decoding through their own decoder; new shares always use v2.
+- **Opening:** `App` calls `openSharedLink` for `#c2...` / `#/c/...` at start and on `hashchange`. The hash is
   replaced by `#/` first (a reload never re-applies it). Decoding is strict and never throws: token
-  <= 4 KB, decompressed JSON <= 16 KB, whitelisted keys, storage zod schemas with generation-aware
+  <= 4 KB (v2: 2 KB), decompressed JSON <= 16 KB (v2: 2 KB), bounds-checked bit reads (truncated
+  input is an error), unknown numbers dropped with a warning, whitelisted keys, storage zod schemas with generation-aware
   EV / AV / Stat Point caps, then a check against the generation's data. Unknown parts are dropped and
   listed as warnings. The load goes through `applyMatchupSnapshot` (switches generation, regulation,
   format and matchup in one commit, persisted like any change). `AppState.shareNotice` holds the

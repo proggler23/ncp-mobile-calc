@@ -81,8 +81,8 @@ test('long-press a result row, copy the link, open it elsewhere, then undo', asy
     .getByRole('button', { name: /Copy link/ })
     .click()
   const link = await page.evaluate(() => navigator.clipboard.readText())
-  expect(link).toMatch(/#\/c\/v1\.[\w-]+$/)
-  expect(link.length).toBeLessThan(600)
+  expect(link).toMatch(/#c2[\w-]+$/)
+  expect(link.length).toBeLessThanOrEqual(180)
   expect(text.split('\n')[2]).toBe(link)
 
   // The recipient: a fresh browser profile (nothing saved yet).
@@ -100,6 +100,7 @@ test('long-press a result row, copy the link, open it elsewhere, then undo', asy
   await expect(rows2.nth(1).getByRole('button').first()).toHaveAttribute('aria-expanded', 'true')
   expect(page2.url()).toMatch(/#\/$/)
   expect(page2.url()).not.toContain('/c/')
+  expect(page2.url()).not.toContain('#c2')
   const o2 = await page2.evaluate(() => ({
     scroll: document.scrollingElement?.scrollWidth ?? 0,
     inner: window.innerWidth,
@@ -122,6 +123,25 @@ test('long-press a result row, copy the link, open it elsewhere, then undo', asy
   await expect(page2.locator('.result').first()).toBeVisible({ timeout: 30_000 })
   await expect(page2.getByText('Shared calc loaded')).toHaveCount(0)
   await other.close()
+})
+
+// A link as written by v1 (committed in src/share/codec.test.ts); old links must keep opening.
+const V1_LINK =
+  '#/c/v1.Rc-xbsMwDATQf7mZQ-JsHtOta0dBAy1LNmFZcikJQRrk3wulLboQBAji3hm4lfdDciogqF92B8IMeuCGER8tgbBjNKgs8SZphn2SgSQnyWtmBaUWI-GN1YcWQZBUZZeZqwehSNVWJq96BxkE3nxuFYQQWf0UpX6BsKXsthwCCAdrlbSUNVdYMic6kbkMNFDfLgOdrP1JfI0HCkZcmyY_gzBhNGf7tGSwsLo178ef7z3HeO8dc1vWskkvFiX4rFOHeda6fjbeOnpWXnJykW-vB7eVKHM_HJqrd_-w4SX6pVnbcwPobO03'
+
+test('an old v1 link still opens', async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 740 })
+  await page.goto(`/${V1_LINK}`)
+  await expect(page.getByText('Shared calc loaded')).toBeVisible({ timeout: 30_000 })
+  await expect(page.locator('.result').first()).toBeVisible()
+  expect(page.url()).toMatch(/#\/$/)
+})
+
+test('a broken v2 link shows an error and leaves the app usable', async ({ page }) => {
+  await page.goto('/#c2AAAA')
+  await expect(page.getByRole('alert')).toBeVisible({ timeout: 30_000 })
+  expect(page.url()).toMatch(/#\/$/)
+  await expect(page.getByRole('button', { name: /Choose my Pokémon/ })).toBeVisible()
 })
 
 test('a broken link shows an error and leaves the app usable', async ({ page }) => {

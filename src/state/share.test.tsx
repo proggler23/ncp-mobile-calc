@@ -76,7 +76,7 @@ describe('shared calc flow', () => {
     const before = store.get()
     expect(before.gen).toBe('sv')
 
-    history.replaceState(null, '', `/#/c/${token}`)
+    history.replaceState(null, '', `/#c${token}`)
     await openSharedLink(token)
     const s = store.get()
     expect(location.hash).toBe('#/')
@@ -217,7 +217,7 @@ describe('share message', () => {
     expect(line1).toContain('Garchomp Rock Slide vs.')
     expect(line1).toMatch(/\d%/)
     expect(line2).toBe('Reg M-C · Doubles · ☀ Sun · Gravity · Mine: Tailwind · Opp: Reflect')
-    expect(c.url).toMatch(/^http:\/\/localhost(:\d+)?\/#\/c\/v1\.[\w-]+$/)
+    expect(c.url).toMatch(/^http:\/\/localhost(:\d+)?\/#c2[\w-]+$/)
     expect(c.full).toBe(`${c.text}\n${c.url}`)
     expect(c.title).toBe('NCP Mobile Calc')
     expect(contextLine({ ...s, lang: 'de' } as typeof s, 'de')).toContain('Doppel')

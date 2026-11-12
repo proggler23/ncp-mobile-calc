@@ -39,9 +39,13 @@ export interface ShareContent {
   full: string
 }
 
-/** `https://host/base/#/c/<token>` (`BASE_URL` is the Vite base, `/` or `/repo/`). */
+/**
+ * v2 (token `2<data>`): `https://host/base/#c2<data>`; v1 (token `v1.<data>`): `.../#/c/v1.<data>`.
+ * (`BASE_URL` is the Vite base, `/` or `/repo/`.)
+ */
 export function shareUrl(token: string): string {
-  return `${globalThis.location.origin}${import.meta.env.BASE_URL}#/c/${token}`
+  const base = `${globalThis.location.origin}${import.meta.env.BASE_URL}`
+  return token.startsWith('2') ? `${base}#c${token}` : `${base}#/c/${token}`
 }
 
 export function buildSharePayload(s: AppState, move?: MoveRef): SharePayload {
@@ -172,7 +176,7 @@ let inFlight: string | undefined
 let noticeId = 0
 
 /**
- * Open a `v1.<payload>` link token: clears the hash (so a reload does not apply it again), waits
+ * Open a link token (`2<payload>` or `v1.<payload>`): clears the hash (so a reload does not apply it again), waits
  * for the app, decodes with full validation, switches generation / regulation / format, replaces
  * the matchup and announces it with an Undo. Never throws; on failure the state is untouched.
  */

@@ -30,7 +30,7 @@ concurrency:
   cancel-in-progress: false
 env:
   # Paths this workflow may change (everything else in the checkout is ignored / never committed)
-  UPDATE_PATHS: src/data/generated src/bridge/generated src/engine/__golden__ vendor/ncp
+  UPDATE_PATHS: src/data/generated src/bridge/generated src/share/generated src/engine/__golden__ vendor/ncp
 jobs:
   build-and-check:
     runs-on: ubuntu-latest
@@ -66,6 +66,8 @@ jobs:
         run: npm run ncp:sync
       - name: Rebuild bridge maps
         run: npm run build:bridge
+      - name: Extend share-id tables (append-only)
+        run: npm run build:share-ids
 
       - name: Validation gates (schema, count deltas, bridge coverage, vendor checksums, lint, typecheck, tests, build)
         id: gate

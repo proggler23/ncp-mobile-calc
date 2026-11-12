@@ -65,7 +65,7 @@ describe('ShareSheet', () => {
     const lines = (arg.text as string).split('\n')
     expect(lines).toHaveLength(3)
     expect(lines[0]).toContain('Flare Blitz')
-    expect(lines[2]).toMatch(/^http\S+#\/c\/v1\.[\w-]+$/)
+    expect(lines[2]).toMatch(/^http\S+#c2[\w-]+$/)
     expect(writeText).not.toHaveBeenCalled()
     expect(onClose).toHaveBeenCalled()
   })
@@ -105,7 +105,7 @@ describe('ShareSheet', () => {
     expect(await screen.findByText('Copied')).toBeInTheDocument()
     const text = writeText.mock.calls[0]![0] as string
     expect(text.split('\n')).toHaveLength(3)
-    expect(text.split('\n')[2]).toMatch(/^http.*#\/c\/v1\./)
+    expect(text.split('\n')[2]).toMatch(/^http.*#c2/)
   })
 
   it('Copy text = three lines, Copy link = only the link; the toast is German in German', async () => {
@@ -117,7 +117,7 @@ describe('ShareSheet', () => {
     await waitFor(() => expect(link).toBeEnabled())
     fireEvent.click(link)
     expect(await screen.findByText('Kopiert')).toBeInTheDocument()
-    expect(writeText.mock.calls[0]![0]).toMatch(/^http\S+#\/c\/v1\.[\w-]+$/)
+    expect(writeText.mock.calls[0]![0]).toMatch(/^http\S+#c2[\w-]+$/)
     fireEvent.click(screen.getByRole('button', { name: /Text kopieren/ }))
     await waitFor(() => expect(writeText).toHaveBeenCalledTimes(2))
     const full = writeText.mock.calls[1]![0] as string
