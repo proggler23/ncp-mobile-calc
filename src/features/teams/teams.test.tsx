@@ -189,6 +189,7 @@ describe('main screen integration', () => {
     await createTeam('B', 'champions')
     resetStore()
     await openApp('/')
+    fireEvent.click(await screen.findByRole('button', { name: 'Switch team' }))
     fireEvent.change(await screen.findByLabelText('Active team'), {
       target: { value: store.get().teams.find((t) => t.name === 'B')!.uid },
     })

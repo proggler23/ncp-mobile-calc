@@ -316,19 +316,23 @@ describe('regulation selection and persistence', () => {
     expect(store.get().regulation).toBe('regg')
   })
 
-  it('the top bar selector switches the regulation and the pickers follow', async () => {
+  it('the combined top bar select switches gen + regulation and the pickers follow', async () => {
     history.replaceState(null, '', '#/')
     render(<App />)
     await waitFor(() => expect(store.get().booted).toBe(true), { timeout: 20000 })
-    const select = await screen.findByLabelText('Regulation')
-    expect(select).toHaveValue('regmc')
-    expect(
-      within(select)
-        .getAllByRole('option')
-        .map((o) => o.textContent),
-    ).toEqual(['Reg M-C', 'Reg M-B', 'Reg M-A', 'No filter'])
-    fireEvent.change(select, { target: { value: 'regmb' } })
-    expect(store.get().regulation).toBe('regmb')
+    const select = await screen.findByLabelText('Generation and regulation')
+    expect(select).toHaveValue('champions:regmc')
+    expect(screen.queryByLabelText('Regulation')).toBeNull() // no separate regulation row any more
+    const options = within(select).getAllByRole('option')
+    expect(options.map((o) => o.textContent)).toEqual(
+      expect.arrayContaining(['Champions · M-C', 'Champions · No filter', 'S/V · I', 'GSC']),
+    )
+    // regulations are grouped under their generation; plain generations are single options
+    expect(within(select).getByRole('group', { name: 'S/V' })).toBeVisible()
+    expect(within(select).getByRole('option', { name: 'GSC' })).toHaveValue('gsc')
+    fireEvent.change(select, { target: { value: 'champions:regmb' } })
+    await waitFor(() => expect(store.get().regulation).toBe('regmb'))
+    expect(select).toHaveValue('champions:regmb')
     fireEvent.click(await screen.findByRole('button', { name: /Choose my Pokémon/ }))
     const box = await screen.findByRole('searchbox')
     fireEvent.change(box, { target: { value: 'Salamence' } })
@@ -340,12 +344,42 @@ describe('regulation selection and persistence', () => {
     expect(await screen.findByRole('button', { name: /Koraidon/ })).toBeVisible()
   })
 
-  it('no selector for generations without regulations', async () => {
+  it('picking "S/V · Reg G" sets both; each generation keeps its own regulation', async () => {
+    history.replaceState(null, '', '#/')
+    render(<App />)
+    await waitFor(() => expect(store.get().booted).toBe(true), { timeout: 20000 })
+    const select = await screen.findByLabelText('Generation and regulation')
+    fireEvent.change(select, { target: { value: 'champions:regmb' } })
+    await waitFor(() => expect(store.get().regulation).toBe('regmb'))
+    fireEvent.change(select, { target: { value: 'sv:regg' } })
+    await waitFor(() => expect(store.get().gen).toBe('sv'))
+    await waitFor(() => expect(store.get().regulation).toBe('regg'))
+    expect(select).toHaveValue('sv:regg')
+    await waitFor(async () =>
+      expect((await (await getRepository()).getSettings()).regulations).toEqual({
+        champions: 'regmb',
+        sv: 'regg',
+      }),
+    )
+    // "No filter" of a generation is selectable too, and a plain generation sets only the gen
+    fireEvent.change(select, { target: { value: 'sv:none' } })
+    await waitFor(() => expect(store.get().regulation).toBe('none'))
+    fireEvent.change(select, { target: { value: 'gsc' } })
+    await waitFor(() => expect(store.get().gen).toBe('gsc'))
+    expect(select).toHaveValue('gsc')
+    // back to Champions through its option restores the chosen regulation
+    fireEvent.change(select, { target: { value: 'champions:regmb' } })
+    await waitFor(() => expect(store.get().gen).toBe('champions'))
+    expect(store.get().regulation).toBe('regmb')
+  })
+
+  it('a generation without regulations is a plain option', async () => {
     await resetAll({ gen: 'champions' })
     await (await getRepository()).setSettings({ gen: 'gsc' })
     history.replaceState(null, '', '#/')
     render(<App />)
     await waitFor(() => expect(store.get().booted).toBe(true), { timeout: 20000 })
+    expect(await screen.findByLabelText('Generation and regulation')).toHaveValue('gsc')
     expect(screen.queryByLabelText('Regulation')).toBeNull()
   })
 })

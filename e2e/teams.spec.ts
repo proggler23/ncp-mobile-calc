@@ -27,7 +27,7 @@ async function nothingOverflows(page: Page) {
 /** First run (Champions default): Create team -> import paste -> open the team. */
 async function createTeamFromPaste(page: Page, name = 'E2E team') {
   await page.goto('/')
-  await page.getByRole('link', { name: /Create team/ }).click({ timeout: 30_000 })
+  await page.getByRole('link', { name: '+ Team' }).click({ timeout: 30_000 })
   await expect(page.getByRole('heading', { name: 'Teams' })).toBeVisible()
   await page.getByRole('button', { name: 'Import paste' }).click()
   const dialog = page.getByRole('dialog', { name: 'Import Showdown paste' })
@@ -119,7 +119,7 @@ test('back button closes the open sheet instead of leaving the app', async ({ pa
 
 test('back leaves the teams screen for the calculator', async ({ page }) => {
   await page.goto('/')
-  await page.getByRole('link', { name: /Create team/ }).click({ timeout: 30_000 })
+  await page.getByRole('link', { name: '+ Team' }).click({ timeout: 30_000 })
   await expect(page.getByRole('heading', { name: 'Teams' })).toBeVisible()
   await page.getByRole('button', { name: /New team/ }).click()
   const dialog = page.getByRole('dialog', { name: 'Create team' })
@@ -152,6 +152,9 @@ test('teams screen has no horizontal overflow at 360px', async ({ page }, info) 
   await expect(page.getByRole('group', { name: /Team A fairly/ })).toBeVisible()
   await nothingOverflows(page)
   await shot(page, 'teams-6-main-360', info.project.name)
+  // the switcher (select + Manage teams) opens behind the ▾ button
+  await page.getByRole('button', { name: 'Switch team' }).click()
+  await nothingOverflows(page)
   // tap targets on the teams screen
   await page.getByRole('link', { name: 'Manage teams' }).click()
   const small = await page.evaluate(() =>
@@ -185,11 +188,11 @@ test('a generation that was never downloaded reports it when offline', async ({
   })
   await page.evaluate(() => navigator.serviceWorker?.ready)
   await context.setOffline(true)
-  await page.getByLabel('Generation').selectOption('swsh')
+  await page.getByLabel('Generation and regulation').selectOption('swsh')
   await expect(page.getByRole('alert').filter({ hasText: /not downloaded yet/ })).toBeVisible()
   // still on the working generation
-  await expect(page.getByLabel('Generation')).toHaveValue('champions')
+  await expect(page.getByLabel('Generation and regulation')).toHaveValue('champions:regmc')
   await context.setOffline(false)
-  await page.getByLabel('Generation').selectOption('swsh')
-  await expect(page.getByLabel('Generation')).toHaveValue('swsh')
+  await page.getByLabel('Generation and regulation').selectOption('swsh')
+  await expect(page.getByLabel('Generation and regulation')).toHaveValue('swsh')
 })

@@ -131,7 +131,7 @@ p {
 .topbar {
   display: flex;
   align-items: center;
-  gap: 0.375rem;
+  gap: 0.25rem;
   padding: calc(0.375rem + var(--safe-t)) 0.5rem 0.375rem;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
@@ -142,7 +142,7 @@ p {
 }
 
 .topbar__title {
-  flex: 1;
+  flex: 0 1 auto;
   min-width: 0;
   font-size: 1rem;
   font-weight: 700;
@@ -152,48 +152,25 @@ p {
 }
 
 .topbar__gen {
-  width: auto;
-  max-width: 7.5rem;
-}
-
-/* Regulation select (only for generations that have regulations). Gen select + format switch +
-   menu already fill a 360px row (16px text, 44px targets), so on narrow screens the regulation
-   gets its own full-width row directly below; from 560px it sits next to the gen select. */
-.topbar {
-  flex-wrap: wrap;
-}
-
-.topbar__reg {
-  order: 10;
-  flex: 1 1 100%;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.topbar__reg-label {
-  color: var(--muted);
-  font-size: 0.8125rem;
-}
-
-.topbar__reg .select {
-  flex: 1;
+  padding: 0 0.375rem;
+  flex: 1 1 auto;
   min-width: 0;
+  width: auto;
+  max-width: 14rem;
+  margin-left: auto;
+  text-overflow: ellipsis;
 }
 
-@media (min-width: 560px) {
-  .topbar__reg {
-    order: 0;
-    flex: 0 1 auto;
-  }
-
-  .topbar__reg-label {
-    display: none;
-  }
-
-  .topbar__reg .select {
-    width: auto;
-    max-width: 8rem;
+/* The title is truncated to a few letters on phones: give its room to the gen/regulation select
+   (it stays in the DOM as the page heading). */
+@media (max-width: 440px) {
+  .topbar__title {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 }
 

@@ -7,12 +7,11 @@ import {
   flushMatchup,
   initApp,
   setFormat,
-  setGen,
-  setRegulation,
+  setGenAndRegulation,
 } from './state/app'
 import { refreshStaleDownloads } from './pwa'
 import { useApp, useT } from './state/hooks'
-import { regulationChoices, regulationName } from './state/regulation'
+import { genSelectGroups, genSelectValue, parseGenSelectValue } from './state/genRegulations'
 import { InstallBanner, useInstallBanner } from './features/install/InstallBanner'
 import { initInstall } from './state/install'
 import { initSupportNudge, markMenuSeen, useSupport } from './state/supportNudge'
@@ -50,11 +49,8 @@ function TopBar() {
   const status = useApp((s) => s.status)
   const lang = useApp((s) => s.lang)
   const regulation = useApp((s) => s.regulation)
-  const booted = useApp((s) => s.booted)
   const meta = GEN_META[gen]
   const [menu, setMenu] = useState(false)
-  // Generations without regulations only have "No filter": no selector then.
-  const regulations = booted && status !== 'loading' ? regulationChoices(gen) : []
   const unseen = useSupport((s) => s.loaded && !s.menuSeen)
   return (
     <header className="topbar">
@@ -62,35 +58,30 @@ function TopBar() {
       <select
         className="select topbar__gen"
         aria-label={t('top.gen')}
-        value={gen}
+        value={genSelectValue(gen, regulation)}
         disabled={status === 'loading' || status === 'booting'}
-        onChange={(e) => void setGen(e.target.value as DataGenId)}
+        onChange={(e) => {
+          const v = parseGenSelectValue(e.target.value)
+          void setGenAndRegulation(v.gen, v.regulation)
+        }}
       >
-        {GEN_DATA_IDS.map((g) => (
-          <option key={g} value={g}>
-            {GEN_META[g].label}
-          </option>
-        ))}
+        {genSelectGroups(lang).map((g) => {
+          const [first] = g.options
+          return g.options.length === 1 && first && !first.regulation ? (
+            <option key={g.label} value={first.value}>
+              {first.text}
+            </option>
+          ) : (
+            <optgroup key={g.label} label={g.label}>
+              {g.options.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.text}
+                </option>
+              ))}
+            </optgroup>
+          )
+        })}
       </select>
-      {regulations.length > 1 && (
-        <div className="topbar__reg">
-          <span className="topbar__reg-label" aria-hidden="true">
-            {t('top.regulation')}
-          </span>
-          <select
-            className="select"
-            aria-label={t('top.regulation')}
-            value={regulation}
-            onChange={(e) => setRegulation(e.target.value)}
-          >
-            {regulations.map((id) => (
-              <option key={id} value={id}>
-                {regulationName(gen, id, lang)}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
       {meta.formats.length > 1 && (
         <Segmented
           label={t('top.format')}

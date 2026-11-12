@@ -1,4 +1,5 @@
 import type { DataGenId } from '../../bridge/types'
+import type { Lang, TFn } from '../../i18n'
 import { useApp, useT } from '../../state/hooks'
 import { buildProblemsOf, problemText, regulationName } from '../../state/regulation'
 import './legal.css'
@@ -31,5 +32,44 @@ export function LegalBadge({
       <span aria-hidden="true">⚠ </span>
       {detail ? t('reg.notLegalWhat', { reg, what }) : t('reg.notLegal', { reg })}
     </span>
+  )
+}
+
+/** The texts of a "not legal" marker (undefined when the build is legal / unfiltered). */
+export function legalText(
+  gen: DataGenId,
+  regulation: string,
+  set: SetLike,
+  lang: Lang,
+  t: TFn,
+): { short: string; full: string } | undefined {
+  const problems = buildProblemsOf(gen, regulation, set)
+  if (!problems) return undefined
+  const reg = regulationName(gen, regulation, lang)
+  const what = problemText(gen, problems, set, lang)
+  return { short: t('reg.notLegal', { reg }), full: t('reg.notLegalWhat', { reg, what }) }
+}
+
+/** Compact ⚠ button (44px target): the accessible name is the short text; the owner shows the rest. */
+export function LegalIcon({
+  label,
+  open,
+  onToggle,
+}: {
+  label: string
+  open: boolean
+  onToggle: () => void
+}) {
+  return (
+    <button
+      type="button"
+      className="legal-icon"
+      aria-label={label}
+      aria-expanded={open}
+      title={label}
+      onClick={onToggle}
+    >
+      <span aria-hidden="true">⚠</span>
+    </button>
   )
 }

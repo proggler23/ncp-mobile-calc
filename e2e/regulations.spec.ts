@@ -32,8 +32,8 @@ test('regulation selector: default Reg M-C, species search follows the regulatio
   page,
 }) => {
   await ready(page)
-  const reg = page.getByLabel('Regulation')
-  await expect(reg).toHaveValue('regmc')
+  const reg = page.getByLabel('Generation and regulation')
+  await expect(reg).toHaveValue('champions:regmc')
 
   await page.getByRole('button', { name: /Choose my Pokémon/ }).click()
   const search = page.getByRole('searchbox')
@@ -44,14 +44,14 @@ test('regulation selector: default Reg M-C, species search follows the regulatio
   await search.fill('Salamence')
   await expect(page.getByRole('button', { name: /^Salamence/ }).first()).toBeVisible()
   await page.keyboard.press('Escape')
-  await reg.selectOption('regmb')
+  await reg.selectOption('champions:regmb')
   await page.getByRole('button', { name: /Choose my Pokémon/ }).click()
   await page.getByRole('searchbox').fill('Salamence')
   await expect(page.getByRole('button', { name: /Salamence/ })).toHaveCount(0)
   await page.keyboard.press('Escape')
 
   // "No filter" brings everything the engine knows back
-  await reg.selectOption('none')
+  await reg.selectOption('champions:none')
   await page.getByRole('button', { name: /Choose my Pokémon/ }).click()
   await page.getByRole('searchbox').fill('Koraidon')
   await expect(page.getByRole('button', { name: /Koraidon/ }).first()).toBeVisible()
@@ -78,24 +78,28 @@ test('the item picker only lists legal items', async ({ page }) => {
 
 test('the regulation choice survives a reload', async ({ page }) => {
   await ready(page)
-  await page.getByLabel('Regulation').selectOption('regma')
+  await page.getByLabel('Generation and regulation').selectOption('champions:regma')
   await page.reload()
   await expect(page.getByRole('button', { name: /Choose my Pokémon/ })).toBeVisible({
     timeout: 30_000,
   })
-  await expect(page.getByLabel('Regulation')).toHaveValue('regma')
+  await expect(page.getByLabel('Generation and regulation')).toHaveValue('champions:regma')
 })
 
 for (const gen of ['champions', 'sv']) {
-  test(`top bar with the regulation select has no overflow at 360px (${gen})`, async ({ page }) => {
+  test(`top bar with the combined gen/regulation select has no overflow at 360px (${gen})`, async ({
+    page,
+  }) => {
     await page.setViewportSize({ width: 360, height: 700 })
     await ready(page)
     if (gen === 'sv') {
-      await page.getByLabel('Generation').selectOption('sv')
-      await expect(page.getByLabel('Generation')).toBeEnabled()
-      await expect(page.getByLabel('Regulation')).toHaveValue('regi')
+      await page.getByLabel('Generation and regulation').selectOption('sv:regi')
+      await expect(page.getByLabel('Generation and regulation')).toBeEnabled()
+      await expect(page.getByLabel('Generation and regulation')).toHaveValue('sv:regi')
     }
-    await expect(page.getByLabel('Regulation')).toBeVisible()
+    await expect(page.getByLabel('Generation and regulation')).toBeVisible()
+    // the combined select is the only place: no separate regulation row
+    await expect(page.getByLabel('Regulation', { exact: true })).toHaveCount(0)
     await nothingOverflows(page)
     // title still has room (or is truncated) and the menu stays reachable
     await expect(page.getByRole('button', { name: /^Menu/ })).toBeVisible()

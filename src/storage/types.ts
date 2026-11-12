@@ -175,6 +175,13 @@ export interface Settings {
   menuSeen?: boolean
   /** Device-local, excluded from backups. */
   installPrompt?: InstallPrompt
+  /** Collapsed panels of the matchup screen. Device-local UI preference, excluded from backups. */
+  layout?: LayoutPrefs
+}
+
+export interface LayoutPrefs {
+  resultsCollapsed?: boolean
+  cardsCollapsed?: { mine?: boolean; opp?: boolean }
 }
 
 export const DEFAULT_SETTINGS: Settings = { lang: 'en', gen: 'champions', format: 'doubles' }

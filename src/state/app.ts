@@ -13,7 +13,7 @@ import type {
   StoredMatchup,
   Team,
 } from '../storage/types'
-import { DEFAULT_SETTINGS } from '../storage/types'
+import { DEFAULT_SETTINGS, type LayoutPrefs } from '../storage/types'
 import {
   SIDE_OPTIONS,
   emptyField,
@@ -55,6 +55,12 @@ export type ShareNotice =
   | { kind: 'loaded'; id: number; warnings: ShareWarning[]; undo: MatchupSnapshot }
   | { kind: 'error'; reason: 'offline' | DecodeFailure }
 
+/** Collapsible panels of the matchup screen (persisted per device, see Settings.layout). */
+export interface LayoutState {
+  resultsCollapsed: boolean
+  cardsCollapsed: Record<Side, boolean>
+}
+
 export interface AppState {
   status: 'booting' | 'loading' | 'ready' | 'error'
   /** True once the bridge/engine of the first generation is loaded. */
@@ -93,6 +99,7 @@ export interface AppState {
   shareNotice?: ShareNotice
   /** Move row a shared link pointed at: `MoveResults` expands it (`nonce` remounts the rows). */
   focusMove?: { direction: Direction; index: number; nonce: number }
+  layout: LayoutState
 }
 
 const initialState = (): AppState => ({
@@ -110,6 +117,7 @@ const initialState = (): AppState => ({
   field: emptyField(),
   direction: 'forward',
   lastChanged: 'opp',
+  layout: { resultsCollapsed: false, cardsCollapsed: { mine: false, opp: false } },
 })
 
 export const store = createStore<AppState>(initialState())
@@ -168,14 +176,21 @@ async function persist(
     gen: DataGenId
     format: Format
     regulations: Partial<Record<DataGenId, string>>
+    layout: LayoutPrefs
   }>,
 ) {
-  try {
-    await (await getRepository()).setSettings(patch)
-  } catch {
-    /* storage unavailable (private mode): the app still works, just without persistence */
-  }
+  // One write at a time: setSettings merges into the stored settings (read, then write), so two
+  // overlapping writes (gen, then regulation) could drop each other's fields.
+  persistQueue = persistQueue.then(async () => {
+    try {
+      await (await getRepository()).setSettings(patch)
+    } catch {
+      /* storage unavailable (private mode): the app still works, just without persistence */
+    }
+  })
+  await persistQueue
 }
+let persistQueue: Promise<void> = Promise.resolve()
 
 // ---------------------------------------------------------------------------------------------
 // Boot
@@ -211,7 +226,18 @@ async function boot(): Promise<void> {
   const meta = GEN_META[gen]
   let format = meta.formats.includes(settings.format) ? settings.format : meta.defaultFormat
   const regulations = settings.regulations ?? {}
-  store.set({ status: 'loading', lang: settings.lang, gen, format, regulations })
+  const lp = settings.layout
+  store.set({
+    status: 'loading',
+    lang: settings.lang,
+    gen,
+    format,
+    regulations,
+    layout: {
+      resultsCollapsed: !!lp?.resultsCollapsed,
+      cardsCollapsed: { mine: !!lp?.cardsCollapsed?.mine, opp: !!lp?.cardsCollapsed?.opp },
+    },
+  })
   try {
     await prepareLib(gen)
   } catch (e) {
@@ -307,6 +333,29 @@ export function setFormat(format: Format): void {
   if (!meta.formats.includes(format)) return
   commit({ format, field: sanitizeField(meta, store.get().field, format) })
   void persist({ format })
+}
+
+export function setResultsCollapsed(collapsed: boolean): void {
+  const layout = { ...store.get().layout, resultsCollapsed: collapsed }
+  store.set({ layout })
+  void persist({ layout })
+}
+
+export function setCardCollapsed(side: Side, collapsed: boolean): void {
+  const cur = store.get().layout
+  const layout = { ...cur, cardsCollapsed: { ...cur.cardsCollapsed, [side]: collapsed } }
+  store.set({ layout })
+  void persist({ layout })
+}
+
+/**
+ * Pick a generation together with one of its regulations (the combined top bar select). The
+ * regulation is stored per generation, so switching back later restores it.
+ */
+export async function setGenAndRegulation(gen: DataGenId, regulation?: string): Promise<void> {
+  await setGen(gen)
+  const s = store.get()
+  if (s.gen === gen && regulation && regulation !== s.regulation) setRegulation(regulation)
 }
 
 /** Select the regulation of the current generation (persisted per generation). */
@@ -784,5 +833,7 @@ store.subscribe(() => {
 })
 
 export function setFocusMove(focus: { direction: Direction; index: number } | undefined): void {
+  // The row a shared link points at must be visible.
+  if (focus && store.get().layout.resultsCollapsed) setResultsCollapsed(false)
   store.set({ focusMove: focus && { ...focus, nonce: (store.get().focusMove?.nonce ?? 0) + 1 } })
 }

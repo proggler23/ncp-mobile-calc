@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import type { MoveResult } from '../../engine/types'
-import { setDirection } from '../../state/app'
+import { setDirection, setResultsCollapsed } from '../../state/app'
 import { useApp, useT } from '../../state/hooks'
 import { getLib } from '../../state/lib'
 import { Segmented } from '../../ui/controls'
 import { useLongPress } from '../../ui/useLongPress'
+import { useSwipe } from '../../ui/useSwipe'
 import { koLevel, moveLine, percentText, plainText } from './ko'
 import { ShareSheet } from './ShareSheet'
+import { bestMove, summaryText } from './summary'
 
 interface RowProps {
   r: MoveResult
@@ -82,6 +84,7 @@ export function MoveResults() {
   const mine = useApp((s) => s.mine)
   const opp = useApp((s) => s.opp)
   const focus = useApp((s) => s.focusMove)
+  const collapsed = useApp((s) => s.layout.resultsCollapsed)
   const [sharing, setSharing] = useState<number | null>(null)
   const hasBoth = !!mine && !!opp
 
@@ -96,42 +99,77 @@ export function MoveResults() {
   }
 
   const defender = forward ? opp : mine
+  const swipe = useSwipe({
+    onSwipeDown: () => setResultsCollapsed(true),
+    onSwipeUp: () => setResultsCollapsed(false),
+  })
+  const best = bestMove(shown.map(({ r }) => ({ r, name: label(r.move) })))
+  const summary = !hasBoth
+    ? t('res.pickBoth')
+    : calcError
+      ? calcError
+      : best
+        ? summaryText(best)
+        : t('res.summaryNone')
   const sharedRow = sharing === null ? undefined : rows[sharing]
 
   return (
     <section className="results" aria-label={t('res.title')} aria-live="polite">
-      <Segmented
-        label={t('res.direction')}
-        value={direction}
-        onChange={setDirection}
-        options={[
-          { value: 'forward', label: t('res.mine') },
-          { value: 'reverse', label: t('res.opp') },
-        ]}
-      />
-      {!hasBoth && <p className="muted pad">{t('res.pickBoth')}</p>}
-      {calcError && (
-        <p className="notice notice--error" role="alert">
-          {calcError}
-        </p>
-      )}
-      {hasBoth && !calcError && shown.length === 0 && (
-        <p className="muted pad">{t(forward ? 'res.noMovesMine' : 'res.noMovesOpp')}</p>
-      )}
-      {shown.length > 0 && (
-        <ul className="results__list" key={`${direction}-${focus?.nonce ?? 0}`}>
-          {shown.map(({ r, slot }) => (
-            <Row
-              key={`${slot}-${r.move}`}
-              r={r}
-              name={label(r.move)}
-              reverse={!forward}
-              initiallyOpen={focus?.direction === direction && focus.index === slot}
-              onShare={() => setSharing(slot)}
-            />
-          ))}
-        </ul>
-      )}
+      <button
+        type="button"
+        className={`results__handle${collapsed ? ' results__handle--collapsed' : ''}`}
+        aria-expanded={!collapsed}
+        aria-controls="results-body"
+        aria-label={collapsed ? `${t('res.toggle')}: ${summary}` : t('res.toggle')}
+        title={t('res.toggle')}
+        onClick={() => setResultsCollapsed(!collapsed)}
+        {...swipe}
+      >
+        {collapsed ? (
+          <span className="results__summary">
+            <span aria-hidden="true">▲ </span>
+            {summary}
+          </span>
+        ) : (
+          <span className="results__grip" aria-hidden="true" />
+        )}
+      </button>
+      <div className={`results__collapse${collapsed ? ' results__collapse--closed' : ''}`}>
+        <div className="results__body" id="results-body" inert={collapsed}>
+          <Segmented
+            label={t('res.direction')}
+            value={direction}
+            onChange={setDirection}
+            options={[
+              { value: 'forward', label: t('res.mine') },
+              { value: 'reverse', label: t('res.opp') },
+            ]}
+          />
+          {!hasBoth && <p className="muted pad">{t('res.pickBoth')}</p>}
+          {calcError && (
+            <p className="notice notice--error" role="alert">
+              {calcError}
+            </p>
+          )}
+          {hasBoth && !calcError && shown.length === 0 && (
+            <p className="muted pad">{t(forward ? 'res.noMovesMine' : 'res.noMovesOpp')}</p>
+          )}
+          {shown.length > 0 && (
+            <ul className="results__list" key={`${direction}-${focus?.nonce ?? 0}`}>
+              {shown.map(({ r, slot }) => (
+                <Row
+                  key={`${slot}-${r.move}`}
+                  r={r}
+                  name={label(r.move)}
+                  reverse={!forward}
+                  initiallyOpen={focus?.direction === direction && focus.index === slot}
+                  onShare={() => setSharing(slot)}
+                />
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
       {sharing !== null && sharedRow && sharedRow.move !== '(No Move)' && (
         <ShareSheet
           row={sharedRow}

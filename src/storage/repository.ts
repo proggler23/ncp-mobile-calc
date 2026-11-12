@@ -226,6 +226,7 @@ export function createRepository(backend: Backend): Repository {
       delete exported.supportNudge
       delete exported.menuSeen
       delete exported.installPrompt
+      delete exported.layout
       const file: BackupFile = {
         app: BACKUP_APP_ID,
         version: backupSchemaVersion,
@@ -315,9 +316,11 @@ export function createRepository(backend: Backend): Repository {
         delete settings.supportNudge
         delete settings.menuSeen
         delete settings.installPrompt
+        delete settings.layout
         if (local.supportNudge) settings.supportNudge = local.supportNudge
         if (local.menuSeen) settings.menuSeen = local.menuSeen
         if (local.installPrompt) settings.installPrompt = local.installPrompt
+        if (local.layout) settings.layout = local.layout
         await backend.put('settings', SETTINGS_KEY, settings)
       }
       return {

@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react'
 import { GEN_META } from '../../bridge/gens'
 import { selectTeamMember, setGen } from '../../state/app'
 import { useApp, useT } from '../../state/hooks'
@@ -7,7 +8,7 @@ import { switchActiveTeam } from '../../state/teams'
 import { NavLink } from '../../ui/NavLink'
 import '../regulation/legal.css'
 
-function TeamSwitcher() {
+function TeamSwitcher({ onDone }: { onDone: () => void }) {
   const t = useT()
   const teams = useApp((s) => s.teams)
   const team = useApp((s) => s.team)
@@ -20,7 +21,11 @@ function TeamSwitcher() {
         className="select"
         aria-label={t('team.switcher')}
         value={team?.uid ?? ''}
-        onChange={(e) => e.target.value && void switchActiveTeam(e.target.value)}
+        onChange={(e) => {
+          if (!e.target.value) return
+          void switchActiveTeam(e.target.value)
+          onDone()
+        }}
       >
         {!team && (
           <option value="" disabled>
@@ -42,6 +47,28 @@ function TeamSwitcher() {
   )
 }
 
+/** Chip text: the first letters of the (localized) species name; the full name is the label. */
+export const CHIP_CHARS = 4
+export function chipLabel(name: string): string {
+  return Array.from(name).slice(0, CHIP_CHARS).join('')
+}
+
+/** Compact ▾ button that opens the team switcher (select + "Manage teams") below the chips. */
+function SwitcherButton({ open, onToggle }: { open: boolean; onToggle: () => void }) {
+  const t = useT()
+  return (
+    <button
+      type="button"
+      className="chip chip--switcher"
+      aria-label={t('team.switcherShort')}
+      aria-expanded={open}
+      onClick={onToggle}
+    >
+      <span aria-hidden="true">{open ? '▴' : '▾'}</span>
+    </button>
+  )
+}
+
 export function ChipsRow() {
   const t = useT()
   const team = useApp((s) => s.team)
@@ -50,68 +77,90 @@ export function ChipsRow() {
   const lang = useApp((s) => s.lang)
   const selected = useApp((s) => s.mineTeamIndex)
   const regulation = useApp((s) => s.regulation)
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!open) return
+    const away = (e: Event) => {
+      if (!ref.current?.contains(e.target as Node)) setOpen(false)
+    }
+    const esc = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false)
+    document.addEventListener('pointerdown', away)
+    document.addEventListener('keydown', esc)
+    return () => {
+      document.removeEventListener('pointerdown', away)
+      document.removeEventListener('keydown', esc)
+    }
+  }, [open])
 
   if (teams.length === 0) {
     return (
-      <div className="chips-row">
-        <NavLink to="/teams" className="btn btn--cta">
-          + {t('team.create')}
+      <div className="chips-row chips-row--single">
+        <NavLink to="/teams" className="chip chip--add" title={t('team.create')}>
+          {t('team.chipsEmpty')}
         </NavLink>
       </div>
     )
   }
+  const toggle = <SwitcherButton open={open} onToggle={() => setOpen(!open)} />
   let body
   if (!team) {
-    body = null
+    body = <span className="muted chips-row__note">{t('team.noneActive')}</span>
   } else if (team.gen !== gen) {
     body = (
-      <div className="chips-row">
-        <span className="muted">
+      <>
+        <span className="muted chips-row__note">
           {t('team.otherGen', { team: team.name, gen: GEN_META[team.gen].label })}
         </span>
         <button type="button" className="btn" onClick={() => void setGen(team.gen)}>
           {t('team.switchGen', { gen: GEN_META[team.gen].label })}
         </button>
-      </div>
+      </>
     )
   } else if (team.members.length === 0) {
-    body = (
-      <div className="chips-row">
-        <span className="muted">{t('teams.noMembers')}</span>
-      </div>
-    )
+    body = <span className="muted chips-row__note">{t('teams.noMembers')}</span>
   } else {
     const { bridge } = getLib()
     body = (
-      <div className="chips-row" role="group" aria-label={t('team.members', { team: team.name })}>
-        {team.members.map((m, i) => (
-          <button
-            key={m.uid}
-            type="button"
-            className="chip"
-            aria-pressed={selected === i}
-            onClick={() => selectTeamMember(i)}
-          >
-            {bridge.speciesDisplayName(gen, m.speciesId, lang)}
-            {buildProblemsOf(gen, regulation, m) && (
-              <span
-                className="chip__warn"
-                title={t('reg.notLegal', { reg: regulationName(gen, regulation, lang) })}
-                role="img"
-                aria-label={t('reg.notLegal', { reg: regulationName(gen, regulation, lang) })}
-              >
-                {' ⚠'}
-              </span>
-            )}
-          </button>
-        ))}
+      <div
+        className="chips-row__members"
+        role="group"
+        aria-label={t('team.members', { team: team.name })}
+      >
+        {team.members.map((m, i) => {
+          const full = bridge.speciesDisplayName(gen, m.speciesId, lang)
+          const illegal = !!buildProblemsOf(gen, regulation, m)
+          const warn = t('reg.notLegal', { reg: regulationName(gen, regulation, lang) })
+          const label = illegal ? `${full}. ${warn}` : full
+          return (
+            <button
+              key={m.uid}
+              type="button"
+              className="chip"
+              aria-pressed={selected === i}
+              aria-label={label}
+              title={label}
+              onClick={() => selectTeamMember(i)}
+            >
+              {chipLabel(full)}
+              {illegal && (
+                <span className="chip__warn" aria-hidden="true">
+                  ⚠
+                </span>
+              )}
+            </button>
+          )
+        })}
       </div>
     )
   }
   return (
-    <>
-      <TeamSwitcher />
-      {body}
-    </>
+    <div className="chips-wrap" ref={ref}>
+      <div className="chips-row">
+        {toggle}
+        {body}
+      </div>
+      {open && <TeamSwitcher onDone={() => setOpen(false)} />}
+    </div>
   )
 }

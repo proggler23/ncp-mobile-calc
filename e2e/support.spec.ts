@@ -17,7 +17,7 @@ test('first saved team shows the nudge above the footer; Never keeps it away aft
   page,
 }, info) => {
   await page.goto('/')
-  await page.getByRole('link', { name: /Create team/ }).click({ timeout: 30_000 })
+  await page.getByRole('link', { name: '+ Team' }).click({ timeout: 30_000 })
   await page.getByRole('button', { name: 'Import paste' }).click()
   const dialog = page.getByRole('dialog', { name: 'Import Showdown paste' })
   await dialog.getByLabel('Team name').fill('Nudge team')
