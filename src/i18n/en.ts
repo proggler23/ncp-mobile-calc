@@ -335,6 +335,8 @@ export const en = {
   'menu.importDone': 'Imported {teams} teams and {sets} sets ({skipped} skipped).',
   'menu.importFailed': 'This file is not a valid backup.',
   'menu.exported': 'Backup file created.',
+  'menu.support': '☕ Support this project',
+  'menu.supportHint': 'Helps cover development & hosting',
   'menu.about': 'About',
   'menu.version': 'Version {version}',
   'menu.data.title': 'Data sources',

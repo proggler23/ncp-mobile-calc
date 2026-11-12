@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { GEN_DATA_IDS } from '../../bridge/gens'
 import { prefetchGen } from '../../bridge/maps'
+import { SUPPORT_URL } from '../../config'
 import { markAllDownloaded } from '../../pwa'
 import { getRepository, reloadLibrary, setLang, store } from '../../state/app'
 import { useApp, useT } from '../../state/hooks'
@@ -175,6 +176,18 @@ export function MenuSheet({ onClose }: { onClose: () => void }) {
             {msg.text}
           </p>
         )}
+
+        <section className="menu__section">
+          <a
+            className="btn menu__support"
+            href={SUPPORT_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {t('menu.support')}
+          </a>
+          <p className="hint">{t('menu.supportHint')}</p>
+        </section>
 
         <section className="menu__section" aria-labelledby="menu-about">
           <h3 id="menu-about">{t('menu.about')}</h3>

@@ -340,6 +340,8 @@ export const de: Dict = {
   'menu.importDone': '{teams} Teams und {sets} Sets importiert ({skipped} übersprungen).',
   'menu.importFailed': 'Diese Datei ist kein gültiges Backup.',
   'menu.exported': 'Backup-Datei erstellt.',
+  'menu.support': '☕ Projekt unterstützen',
+  'menu.supportHint': 'Unterstützt Entwicklung & Hosting',
   'menu.about': 'Info',
   'menu.version': 'Version {version}',
   'menu.data.title': 'Datenquellen',

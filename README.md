@@ -1,5 +1,7 @@
 # NCP Mobile Calc
 
+[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-support-FFDD00?logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/proggler23)
+
 A mobile-first, installable web app (PWA) for Pokémon VGC damage calculations. It is a rebuild of
 the [NCP VGC Damage Calculator](https://nerd-of-now.github.io/NCP-VGC-Damage-Calculator/) with a UI
 designed for phones.
@@ -163,6 +165,12 @@ generations, syncs the NCP upstream if it moved, and runs the validation gates:
 
 Thresholds, rollback, NCP patches and the German-name and curated-set workflows are in
 [docs/MAINTENANCE.md](docs/MAINTENANCE.md).
+
+## Support
+
+This is a free, non-commercial fan tool. If it is useful to you, you can
+[buy me a coffee](https://buymeacoffee.com/proggler23). Donations support its development and
+hosting. They are entirely optional.
 
 ## Data sources and credits
 
