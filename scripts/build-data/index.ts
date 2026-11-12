@@ -1,24 +1,34 @@
 /**
  * Build per-generation JSON assets into src/data/generated/<gen>/.
- * Run: npm run build:data  (add --refresh to ignore the download cache)
+ *
+ *   npm run build:data                  active gens only (config.ts ACTIVE_FORMATS)
+ *   npm run build:data -- --refresh     same, ignoring the download cache (re-fetch usage stats)
+ *   npm run build:data -- --all         every gen (manual; frozen gens are normally untouched)
+ *   npm run build:data -- --gen sv,za   specific gens
+ *   npm run build:data -- --update-names  re-download PokeAPI and rewrite names/de.json
+ *
+ * Frozen gens' files are committed snapshots and are never written unless selected explicitly.
  */
-import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { gzipSync } from 'node:zlib'
 import path from 'node:path'
-import { GENS } from './config'
+import { ACTIVE_FORMATS, GENS, selectGens } from './config'
 import type { GenConfig } from './config'
 import { loadRawGen } from './dex-sources'
-import { ensurePokemonShowdown, PS_VERSION } from './install-ps'
 import { loadDeTables, lookupDe, speciesDe } from './names'
 import type { DeResult, DeTables } from './names'
 import { buildSets, chooseChaos } from './sets'
 import type { ChosenFormat } from './sets'
+import { mergeCurated, stripCurated, validateCurated } from './sets-merge'
+import type { CuratedFile } from './sets-merge'
+import { showdownVersion, usageMonthsOf, writeVersionJson } from './version'
 import { normalizeSearch } from '../../src/data/normalize'
 import type {
   DexFile,
   MoveRecord,
   NamedRecord,
   SearchEntry,
+  SetsFile,
   SpeciesRecord,
 } from '../../src/data/types'
 
@@ -47,12 +57,27 @@ function tally(t: Tally, r: DeResult) {
   t[r.how]++
 }
 
-async function pkgVersion(name: string, from: string): Promise<string> {
-  const p = path.resolve(from, name, 'package.json')
-  return (JSON.parse(await readFile(p, 'utf8')) as { version: string }).version
+async function readJsonIfExists<T>(file: string): Promise<T | undefined> {
+  try {
+    return JSON.parse(await readFile(file, 'utf8')) as T
+  } catch {
+    return undefined
+  }
 }
 
-async function buildGen(cfg: GenConfig, de: DeTables) {
+const CURATED_FILE = path.resolve(import.meta.dirname, 'sets/curated.json')
+
+/** Distinct (format, month) pairs recorded in a sets file. */
+function formatsOf(sets: SetsFile) {
+  const seen = new Map<string, { format: string; month: string }>()
+  for (const list of Object.values(sets))
+    for (const s of list)
+      if (s.format !== 'curated')
+        seen.set(`${s.format}:${s.month}`, { format: s.format, month: s.month })
+  return [...seen.values()].sort((a, b) => (a.month + a.format < b.month + b.format ? -1 : 1))
+}
+
+async function buildGen(cfg: GenConfig, de: DeTables, curated: CuratedFile) {
   const raw = await loadRawGen(cfg)
   const tallies = {
     species: newTally(),
@@ -130,17 +155,40 @@ async function buildGen(cfg: GenConfig, de: DeTables) {
     },
   }
 
-  // Common sets (VGC usage stats)
-  const chosen: ChosenFormat[] = []
-  for (const f of cfg.vgc) {
-    const c = await chooseChaos(f)
-    if (c) chosen.push(c)
-    else console.warn(`  [${cfg.id}] no usable stats for ${f.id}`)
-  }
-  const sets = buildSets(raw, chosen)
-
+  // Common sets (Smogon VGC usage stats). Usage is optional: when the download fails or no usable
+  // stats exist any more (format renamed/retired), keep the last committed snapshot.
   const dir = path.join(OUT, cfg.id)
-  await rm(dir, { recursive: true, force: true })
+  const previous = await readJsonIfExists<SetsFile>(path.join(dir, 'sets.json'))
+  const chosen: ChosenFormat[] = []
+  let usage: { fallback: boolean; reason?: string } = { fallback: false }
+  let generated: SetsFile = {}
+  if (cfg.vgc.length) {
+    try {
+      for (const f of cfg.vgc) {
+        const c = await chooseChaos(f)
+        if (c) chosen.push(c)
+        else console.warn(`  [${cfg.id}] no usable stats for ${f.id}`)
+      }
+      if (!chosen.length) throw new Error('no usable usage stats for any configured format')
+      generated = buildSets(raw, chosen)
+    } catch (e) {
+      const reason = e instanceof Error ? e.message : String(e)
+      console.warn(`  [${cfg.id}] usage stats unavailable (${reason}); keeping committed sets`)
+      usage = { fallback: true, reason }
+      chosen.length = 0
+      generated = previous ? stripCurated(previous) : {}
+    }
+  }
+  const curatedEntries = curated.gens[cfg.id] ?? {}
+  const errors = validateCurated(cfg.id, curatedEntries, {
+    species: (id) => !!raw.resolve.species(id),
+    moves: (id) => !!raw.resolve.moves(id),
+    items: (id) => !!raw.resolve.items(id),
+    abilities: (id) => !!raw.resolve.abilities(id),
+  })
+  if (errors.length) throw new Error(errors.join('\n'))
+  const sets = mergeCurated(generated, curatedEntries)
+
   await mkdir(dir, { recursive: true })
   const files = {
     'dex.json': json(dex),
@@ -160,64 +208,87 @@ async function buildGen(cfg: GenConfig, de: DeTables) {
     learnsets: Object.keys(raw.learnsets).length,
     sets: Object.keys(sets).length,
   }
-  return { cfg, counts, tallies, missing, sizes, chosen, source: raw.source }
+  return {
+    cfg,
+    counts,
+    tallies,
+    missing,
+    sizes,
+    chosen,
+    usage,
+    months: usageMonthsOf(sets),
+    formats: formatsOf(sets),
+    source: raw.source,
+  }
 }
 
 async function main() {
-  await ensurePokemonShowdown()
+  const selected = selectGens(process.argv.slice(2))
+  const frozen = GENS.filter((g) => !selected.includes(g))
+  console.log(
+    `Active formats (config): ${ACTIVE_FORMATS.join(', ')}. Building: ${selected.map((g) => g.id).join(', ')}` +
+      (frozen.length ? `. Frozen (untouched): ${frozen.map((g) => g.id).join(', ')}` : ''),
+  )
   const de = await loadDeTables()
+  const curated =
+    (await readJsonIfExists<CuratedFile>(CURATED_FILE)) ?? ({ gens: {} } as CuratedFile)
   const results = []
-  for (const cfg of GENS) {
+  for (const cfg of selected) {
     console.log(`Building ${cfg.id} ...`)
-    results.push(await buildGen(cfg, de))
+    results.push(await buildGen(cfg, de, curated))
   }
 
-  const psDir = path.resolve(import.meta.dirname, '../../.cache/build-data/ps/node_modules')
+  // sources.json keeps the entries of frozen gens (they are not rebuilt)
+  const sourcesFile = path.join(OUT, 'sources.json')
+  const old = await readJsonIfExists<{ gens?: Record<string, unknown> }>(sourcesFile)
+  const pkg = JSON.parse(
+    await readFile(path.resolve(import.meta.dirname, '../../package.json'), 'utf8'),
+  ) as { devDependencies: Record<string, string> }
   const sources = {
     generatedBy: 'scripts/build-data (npm run build:data)',
     packages: {
-      '@pkmn/dex': await pkgVersion(
-        '@pkmn/dex',
-        path.resolve(import.meta.dirname, '../../node_modules'),
-      ),
-      '@pkmn/data': await pkgVersion(
-        '@pkmn/data',
-        path.resolve(import.meta.dirname, '../../node_modules'),
-      ),
-      'pokemon-showdown': await pkgVersion('pokemon-showdown', psDir),
-      requested: PS_VERSION,
+      'pokemon-showdown': await showdownVersion(),
+      pinned: pkg.devDependencies['pokemon-showdown'],
     },
     germanNames: {
       source:
-        'PokeAPI/pokeapi data/v2/csv (pokemon_species_names, move_names, ability_names, item_names)',
+        'PokeAPI/pokeapi data/v2/csv (pokemon_species_names, move_names, ability_names, item_names), committed snapshot scripts/build-data/names/de.json + overrides.de.json',
+      snapshotDate: de.snapshotDate,
       url: 'https://github.com/PokeAPI/pokeapi/tree/master/data/v2/csv',
       license: 'PokeAPI data: BSD-3-Clause',
       note: 'Names are Nintendo/Game Freak property; used only as display labels.',
     },
     usageStats: {
       source: 'Smogon usage statistics (chaos JSON): https://www.smogon.com/stats/',
-      note: 'Only aggregated usage numbers are used (spreads, items, abilities, moves, tera). No Smogon prose or analysis text is stored.',
+      note: 'Only aggregated usage numbers are used (spreads, items, abilities, moves, tera). No Smogon prose or analysis text is stored. Optional: on fetch failure the last committed sets are kept (gens.<gen>.usageFallback).',
     },
-    entityData: 'Pokemon Showdown data (MIT) via @pkmn/dex and the pokemon-showdown npm package',
-    gens: Object.fromEntries(
-      results.map((r) => [
-        r.cfg.id,
-        {
-          entitySource: r.source,
-          vgcFormats: r.chosen.map((c) => ({
-            format: c.format,
-            month: c.month,
-            cutoff: c.cutoff,
-            battles: c.battles,
-            url: c.url,
-          })),
-          gaps: r.cfg.gaps,
-        },
-      ]),
-    ),
+    entityData: 'Pokemon Showdown data (MIT) via the pinned official pokemon-showdown npm package',
+    gens: {
+      ...(old?.gens ?? {}),
+      ...Object.fromEntries(
+        results.map((r) => [
+          r.cfg.id,
+          {
+            entitySource: r.source,
+            vgcFormats: r.chosen.length
+              ? r.chosen.map((c) => ({
+                  format: c.format,
+                  month: c.month,
+                  cutoff: c.cutoff,
+                  battles: c.battles,
+                  url: c.url,
+                }))
+              : r.formats,
+            ...(r.usage.fallback ? { usageFallback: r.usage.reason } : {}),
+            gaps: r.cfg.gaps,
+          },
+        ]),
+      ),
+    },
   }
   await mkdir(OUT, { recursive: true })
-  await writeFile(path.join(OUT, 'sources.json'), JSON.stringify(sources, null, 2) + '\n')
+  await writeFile(sourcesFile, JSON.stringify(sources, null, 2) + '\n')
+  console.log((await writeVersionJson()) ? 'version.json updated' : 'version.json unchanged')
 
   // Report
   console.log(
@@ -234,13 +305,24 @@ async function main() {
       `${r.cfg.id.padEnd(10)} ${String(c.species).padStart(5)} ${String(c.moves).padStart(5)} ${String(c.items).padStart(5)} ${String(c.abilities).padStart(4)} ${String(c.learnsets).padStart(5)} ${String(c.sets).padStart(4)} | ${miss.padEnd(24)} | ${gz}`,
     )
   }
-  const report = Object.fromEntries(
-    results.map((r) => [
-      r.cfg.id,
-      { counts: r.counts, de: r.tallies, sizes: r.sizes, missing: r.missing },
-    ]),
-  )
   const reportPath = path.resolve(import.meta.dirname, '../../.cache/build-data/report.json')
+  const prevReport = (await readJsonIfExists<Record<string, unknown>>(reportPath)) ?? {}
+  const report = {
+    ...prevReport,
+    ...Object.fromEntries(
+      results.map((r) => [
+        r.cfg.id,
+        {
+          counts: r.counts,
+          de: r.tallies,
+          sizes: r.sizes,
+          missing: r.missing,
+          usage: r.usage,
+        },
+      ]),
+    ),
+  }
+  await mkdir(path.dirname(reportPath), { recursive: true })
   await writeFile(reportPath, JSON.stringify(report, null, 2))
   console.log(`\nDetailed report (missing German names, raw/gzip sizes): ${reportPath}`)
 }

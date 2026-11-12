@@ -26,7 +26,10 @@ import {
   SPECIES_OVERRIDES,
 } from './overrides'
 
-const OUT = path.resolve(import.meta.dirname, '../../src/bridge/generated')
+/** BRIDGE_OUT overrides the output dir (used by the up-to-date check; never in normal builds) */
+const OUT = process.env.BRIDGE_OUT
+  ? path.resolve(process.env.BRIDGE_OUT)
+  : path.resolve(import.meta.dirname, '../../src/bridge/generated')
 const DATA = path.resolve(import.meta.dirname, '../../src/data/generated')
 
 const GENS: { id: DataGenId; engine: EngineGenId; natdex: boolean }[] = [
@@ -212,6 +215,8 @@ async function main() {
     '|---|---|---|---|---|---|---|---|---|---|',
   ]
   const details: string[] = []
+  /** gen -> kind -> unmatched names (machine-readable twin of COVERAGE.md) */
+  const coverage: Record<string, Record<string, { ncpOnly: string[]; sdOnly: string[] }>> = {}
   const kinds: EntityKind[] = ['species', 'moves', 'items', 'abilities']
   for (const g of GENS) {
     const dex = dexes.get(g.id) as DexFile
@@ -236,6 +241,10 @@ async function main() {
       }
       const res = mapKind(kind, dex[kind], full[kind], new Set(def[kind]), g.natdex, pool)
       file[kind] = res.entries
+      ;(coverage[g.id] ??= {})[kind] = {
+        ncpOnly: [...res.ncpOnly].sort(),
+        sdOnly: [...res.sdOnly].sort(),
+      }
       const defSet = new Set(def[kind])
       const onlyDef = res.ncpOnly.filter((n) => defSet.has(n))
       const onlyNd = res.ncpOnly.filter((n) => !defSet.has(n))
@@ -265,6 +274,7 @@ async function main() {
     'cannot be calculated.',
     '',
   ]
+  await writeFile(path.join(OUT, 'coverage.json'), JSON.stringify(coverage, null, 1) + '\n')
   await writeFile(path.join(OUT, 'COVERAGE.md'), [...report, ...summary, '', ...details].join('\n'))
   console.log(summary.join('\n'))
 }

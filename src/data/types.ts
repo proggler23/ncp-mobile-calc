@@ -80,7 +80,7 @@ export interface SearchIndex {
 export interface GenMeta {
   gen: GenId
   label: string
-  /** Where the entity data came from, e.g. "@pkmn/dex gen7" or "pokemon-showdown mod gen7letsgo" */
+  /** Where the entity data came from, e.g. "pokemon-showdown Dex.forGen(7)" or "pokemon-showdown npm mod \"gen7letsgo\"" */
   source: string
   /** Human-readable data gaps for this gen */
   gaps: string[]
