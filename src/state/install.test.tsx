@@ -230,6 +230,16 @@ describe('menu entry', () => {
     expect(screen.getByText(/Add to Home screen/)).toBeInTheDocument()
   })
 
+  it('desktop Chromium with a captured event: entry prompts, no banner', async () => {
+    await boot(DESKTOP)
+    fireEventObj()
+    expect(menuInstall(installStore.get())).toBe('prompt')
+    expect(bannerEligible(installStore.get(), Date.now())).toBe(false)
+    render(<MenuSheet onClose={() => {}} />)
+    fireEvent.click(screen.getByRole('button', { name: '📲 Install app' }))
+    await waitFor(() => expect(prompt).toHaveBeenCalledOnce())
+  })
+
   it('desktop: no entry', async () => {
     await boot(DESKTOP)
     render(<MenuSheet onClose={() => {}} />)

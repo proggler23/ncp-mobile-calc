@@ -71,6 +71,7 @@ export const de: Dict = {
 
   'share.button': 'Teilen',
   'share.buttonLabel': 'Calc zu {move} teilen',
+  'share.hoverLabel': 'Calc teilen',
   'share.title': '{move} → {defender}',
   'share.actions': 'Teilen-Aktionen',
   'share.share': 'Calc teilen',

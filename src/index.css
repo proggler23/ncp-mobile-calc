@@ -14,6 +14,8 @@
   --bad: #b91c1c;
   --bad-bg: #fee2e2;
   --info-bg: #e0e7ff;
+  --page-bg: #e3e6ed;
+  --hover: rgb(20 30 60 / 0.07);
   --radius: 12px;
   --tap: 44px;
   --safe-t: env(safe-area-inset-top, 0px);
@@ -48,6 +50,8 @@
     --bad: #f87171;
     --bad-bg: #431818;
     --info-bg: #1e2a5a;
+    --page-bg: #07080c;
+    --hover: rgb(255 255 255 / 0.08);
   }
 }
 
@@ -367,6 +371,19 @@ summary:focus-visible {
   display: grid;
   gap: 0.5rem;
   overflow-wrap: anywhere;
+  /* floats above the footer buttons: never pushes the content around */
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: calc(6.5rem + var(--safe-b));
+  z-index: 40;
+  width: calc(100% - 1rem);
+  max-width: calc(640px - 1rem);
+  max-height: 45dvh;
+  margin: 0 auto;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.25);
 }
 
 .share-notice ul {
@@ -397,4 +414,66 @@ summary:focus-visible {
   background: var(--text);
   color: var(--bg);
   box-shadow: 0 2px 12px rgb(0 0 0 / 0.3);
+}
+
+/* ---- desktop (wide viewport + mouse): wider card-like column, hover feedback ---- */
+@media (min-width: 900px) and (hover: hover) and (pointer: fine) {
+  body {
+    background: var(--page-bg);
+  }
+
+  #root {
+    padding: 1rem 0;
+  }
+
+  .app {
+    max-width: 720px;
+    height: 100%;
+    margin: 0 auto;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    box-shadow: 0 6px 28px rgb(0 0 0 / 0.14);
+    overflow: hidden;
+  }
+
+  .share-notice {
+    max-width: calc(720px - 1rem);
+    bottom: calc(7.5rem + var(--safe-b));
+  }
+
+  .btn:not(:disabled):hover,
+  .seg__item:not(:disabled):not([aria-checked='true']):hover {
+    background: color-mix(in srgb, var(--surface-2), var(--text) 9%);
+  }
+
+  .chip:not([aria-pressed='true']):hover {
+    background: var(--surface-2);
+  }
+
+  .btn--primary:not(:disabled):hover,
+  .btn--cta:not(:disabled):hover,
+  .chip[aria-pressed='true']:hover,
+  .seg__item[aria-checked='true']:hover {
+    background: var(--accent);
+    filter: brightness(1.12);
+  }
+
+  .btn--danger:not(:disabled):hover {
+    background: var(--bad);
+    filter: brightness(1.1);
+  }
+
+  .btn.btn--support:not(:disabled):hover {
+    background: #f2cf00;
+  }
+
+  .select:not(:disabled):hover,
+  summary:hover {
+    border-color: var(--accent);
+  }
+
+  .row:hover {
+    background: var(--hover);
+  }
 }

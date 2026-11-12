@@ -4,6 +4,7 @@ import { setDirection, setResultsCollapsed } from '../../state/app'
 import { useApp, useT } from '../../state/hooks'
 import { getLib } from '../../state/lib'
 import { Segmented } from '../../ui/controls'
+import { useDesktopPointer } from '../../ui/useDesktopPointer'
 import { useLongPress } from '../../ui/useLongPress'
 import { useSwipe } from '../../ui/useSwipe'
 import { koLevel, moveLine, percentText, plainText } from './ko'
@@ -16,7 +17,8 @@ interface RowProps {
   reverse: boolean
   /** Start expanded (the row a shared link pointed at). */
   initiallyOpen: boolean
-  onShare: () => void
+  /** `anchor`: the row's rectangle (the desktop popover sits next to it). */
+  onShare: (anchor: DOMRect) => void
 }
 
 function Row({ r, name, reverse, initiallyOpen, onShare }: RowProps) {
@@ -26,7 +28,9 @@ function Row({ r, name, reverse, initiallyOpen, onShare }: RowProps) {
   useEffect(() => {
     if (initiallyOpen) ref.current?.scrollIntoView?.({ block: 'nearest' })
   }, [initiallyOpen])
-  const press = useLongPress(onShare)
+  const desktop = useDesktopPointer()
+  const share = () => onShare(ref.current!.getBoundingClientRect())
+  const press = useLongPress(share)
   const ko = plainText(r.koChance)
   const level = koLevel(ko)
   const rolls = (Array.isArray(r.damage[0]) ? (r.damage as number[][]) : [r.damage as number[]])
@@ -36,7 +40,10 @@ function Row({ r, name, reverse, initiallyOpen, onShare }: RowProps) {
     <li
       ref={ref}
       className={`result result--${level}${reverse ? ' result--rev' : ''}`}
-      onContextMenu={press.onContextMenu}
+      onContextMenu={(e) => {
+        e.preventDefault()
+        if (desktop) share() // right-click = the share actions; touch keeps long-press only
+      }}
     >
       <button
         type="button"
@@ -44,6 +51,7 @@ function Row({ r, name, reverse, initiallyOpen, onShare }: RowProps) {
         aria-expanded={open}
         onClick={() => setOpen(!open)}
         {...press}
+        onContextMenu={undefined}
       >
         <span className="result__name">{name}</span>
         <span className="result__pct">
@@ -54,6 +62,17 @@ function Row({ r, name, reverse, initiallyOpen, onShare }: RowProps) {
           {open ? '▾' : '▸'}
         </span>
       </button>
+      {desktop && (
+        <button
+          type="button"
+          className="result__hover-share"
+          aria-label={t('share.hoverLabel')}
+          title={t('share.hoverLabel')}
+          onClick={share}
+        >
+          <span aria-hidden="true">📤</span>
+        </button>
+      )}
       {open && (
         <div className="result__detail">
           <p className="result__desc">{moveLine(r)}</p>
@@ -64,7 +83,7 @@ function Row({ r, name, reverse, initiallyOpen, onShare }: RowProps) {
             type="button"
             className="btn result__share"
             aria-label={t('share.buttonLabel', { move: name })}
-            onClick={onShare}
+            onClick={share}
           >
             <span aria-hidden="true">📤</span> {t('share.button')}
           </button>
@@ -85,7 +104,7 @@ export function MoveResults() {
   const opp = useApp((s) => s.opp)
   const focus = useApp((s) => s.focusMove)
   const collapsed = useApp((s) => s.layout.resultsCollapsed)
-  const [sharing, setSharing] = useState<number | null>(null)
+  const [sharing, setSharing] = useState<{ slot: number; anchor: DOMRect } | null>(null)
   const hasBoth = !!mine && !!opp
 
   const forward = direction === 'forward'
@@ -111,7 +130,7 @@ export function MoveResults() {
       : best
         ? summaryText(best)
         : t('res.summaryNone')
-  const sharedRow = sharing === null ? undefined : rows[sharing]
+  const sharedRow = sharing === null ? undefined : rows[sharing.slot]
 
   return (
     <section className="results" aria-label={t('res.title')} aria-live="polite">
@@ -163,7 +182,7 @@ export function MoveResults() {
                   name={label(r.move)}
                   reverse={!forward}
                   initiallyOpen={focus?.direction === direction && focus.index === slot}
-                  onShare={() => setSharing(slot)}
+                  onShare={(anchor) => setSharing({ slot, anchor })}
                 />
               ))}
             </ul>
@@ -173,7 +192,8 @@ export function MoveResults() {
       {sharing !== null && sharedRow && sharedRow.move !== '(No Move)' && (
         <ShareSheet
           row={sharedRow}
-          move={{ direction, index: sharing }}
+          move={{ direction, index: sharing.slot }}
+          anchor={sharing.anchor}
           moveName={label(sharedRow.move)}
           defenderName={
             defender ? bridge.displayName(gen, 'species', defender.speciesId, lang) : ''

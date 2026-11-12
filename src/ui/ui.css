@@ -396,3 +396,37 @@ textarea.text-input {
   flex: 1;
   min-width: 0;
 }
+
+/* ---- desktop: dialogs are centered modals ---- */
+@media (min-width: 900px) and (hover: hover) and (pointer: fine) {
+  .dialog,
+  .dialog--full {
+    justify-content: center;
+    align-items: center;
+  }
+
+  .dialog__backdrop {
+    background: rgb(0 0 0 / 0.55);
+  }
+
+  .dialog__panel {
+    width: min(600px, calc(100% - 2rem));
+    max-width: none;
+    max-height: 85vh;
+    margin: 0;
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    box-shadow: 0 12px 48px rgb(0 0 0 / 0.4);
+  }
+
+  .dialog--full .dialog__panel {
+    width: min(640px, calc(100% - 2rem));
+    height: 85vh;
+    max-height: 85vh;
+    border-radius: 16px;
+  }
+
+  .dialog__header {
+    padding-top: 0.5rem;
+  }
+}

@@ -8,9 +8,19 @@ export default defineConfig({
   reporter: process.env.CI ? 'github' : 'list',
   use: { baseURL: 'http://localhost:4173', trace: 'on-first-retry' },
   projects: [
-    { name: 'Pixel 7', use: { ...devices['Pixel 7'] } },
+    { name: 'Pixel 7', use: { ...devices['Pixel 7'] }, testIgnore: /desktop\.spec\.ts/ },
     // iPhone 14 emulation on Chromium (WebKit needs system deps; remove browserName override to use WebKit)
-    { name: 'iPhone 14', use: { ...devices['iPhone 14'], browserName: 'chromium' } },
+    {
+      name: 'iPhone 14',
+      use: { ...devices['iPhone 14'], browserName: 'chromium' },
+      testIgnore: /desktop\.spec\.ts/,
+    },
+    // Mouse + keyboard desktop (no touch, not mobile); only the desktop spec runs here.
+    {
+      name: 'Desktop Chrome',
+      use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 800 } },
+      testMatch: /desktop\.spec\.ts/,
+    },
   ],
   webServer: {
     command: 'npm run build && npm run preview -- --port 4173 --strictPort',

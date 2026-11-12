@@ -68,6 +68,7 @@ export const en = {
 
   'share.button': 'Share',
   'share.buttonLabel': 'Share {move} calc',
+  'share.hoverLabel': 'Share calc',
   'share.title': '{move} → {defender}',
   'share.actions': 'Share actions',
   'share.share': 'Share calc',

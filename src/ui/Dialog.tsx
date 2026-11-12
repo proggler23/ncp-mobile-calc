@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, type KeyboardEvent, type ReactNode } from 'react'
+import { useDesktopPointer } from './useDesktopPointer'
 import { useOverlayHistory } from './useOverlay'
 import './ui.css'
 
@@ -24,7 +25,8 @@ interface DialogProps {
 /**
  * Accessible modal: role=dialog, labelled by its title, Escape closes, Tab is trapped, body scroll
  * is locked and focus returns to the opener. Nested dialogs work because the topmost one handles
- * (and stops) the key event.
+ * (and stops) the key event. On desktop (wide + mouse) it is a centered modal; a click on the
+ * backdrop closes it, on every device.
  */
 export function Dialog({
   title,
@@ -37,6 +39,7 @@ export function Dialog({
 }: DialogProps) {
   const ref = useRef<HTMLDivElement>(null)
   const titleId = useId()
+  const desktop = useDesktopPointer()
   useOverlayHistory(onClose)
 
   useEffect(() => {
@@ -81,7 +84,10 @@ export function Dialog({
   }
 
   return (
-    <div className={`dialog dialog--${variant}`} onKeyDown={onKeyDown}>
+    <div
+      className={`dialog dialog--${variant}${desktop ? ' dialog--desktop' : ''}`}
+      onKeyDown={onKeyDown}
+    >
       <div className="dialog__backdrop" onClick={onClose} aria-hidden="true" />
       <div
         ref={ref}

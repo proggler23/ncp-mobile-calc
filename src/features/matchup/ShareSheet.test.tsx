@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { initApp, pickSpecies, setLang, store, updateSet } from '../../state/app'
 import { resetAll } from '../../test-utils'
 import { hideToast, ToastHost } from '../../ui/Toast'
+import { mockDesktop } from '../../ui/mockDesktop'
 import { ShareSheet } from './ShareSheet'
 
 beforeEach(async () => {
@@ -20,7 +21,7 @@ afterEach(() => {
   hideToast()
 })
 
-function open(onClose = vi.fn()) {
+function open(onClose = vi.fn(), anchor?: DOMRect) {
   const row = store.get().calc!.result.moves[0]!
   render(
     <>
@@ -30,6 +31,7 @@ function open(onClose = vi.fn()) {
         moveName="Flare Blitz"
         defenderName="Garchomp"
         onClose={onClose}
+        anchor={anchor}
       />
       <ToastHost />
     </>,
@@ -138,5 +140,37 @@ describe('ShareSheet', () => {
     act(() => void vi.advanceTimersByTime(2100))
     expect(live.textContent).toBe('')
     vi.useRealTimers()
+  })
+})
+
+describe('ShareSheet variants', () => {
+  const anchor = new DOMRect(100, 200, 400, 40)
+  afterEach(() => vi.unstubAllGlobals())
+
+  it('desktop pointer: popover next to the row, Escape closes, no modal dialog markup', async () => {
+    mockDesktop(true)
+    const onClose = open(vi.fn(), anchor)
+    const pop = screen.getByRole('dialog', { name: 'Flare Blitz → Garchomp' })
+    expect(pop).toHaveClass('share-popover')
+    expect(pop).not.toHaveAttribute('aria-modal')
+    expect(document.querySelector('.dialog')).toBeNull()
+    expect(screen.getAllByRole('button')).toHaveLength(3)
+    await waitFor(() => expect(screen.getByRole('button', { name: /Copy link/ })).toBeEnabled())
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(onClose).toHaveBeenCalledOnce()
+  })
+
+  it('desktop pointer: an outside click closes it', () => {
+    mockDesktop(true)
+    const onClose = open(vi.fn(), anchor)
+    fireEvent.pointerDown(document.body)
+    expect(onClose).toHaveBeenCalledOnce()
+  })
+
+  it('touch: the bottom sheet, even with an anchor', () => {
+    mockDesktop(false)
+    open(vi.fn(), anchor)
+    expect(document.querySelector('.dialog--sheet')).not.toBeNull()
+    expect(document.querySelector('.share-popover')).toBeNull()
   })
 })
