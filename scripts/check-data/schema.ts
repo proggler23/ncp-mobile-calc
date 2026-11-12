@@ -102,8 +102,50 @@ export const VersionSchema = z
     ncpSyncedAt: z.string().min(1),
     showdownVersion: z.string().regex(/^\d+\.\d+\.\d+/),
     usageMonths: z.record(z.string(), z.array(z.string().regex(/^\d{4}-\d{2}$/))),
+    regulations: z
+      .record(
+        z.string(),
+        z.record(
+          z.string(),
+          z.object({
+            source: z.enum(['showdown', 'manual']),
+            showdownFormat: z.string().optional(),
+            verified: z.boolean().optional(),
+          }),
+        ),
+      )
+      .optional(),
     namesSnapshotDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
     builtAt: z.string().min(1),
+  })
+  .strict()
+
+const idList = z.array(id).min(1)
+const delta = z.record(id, z.array(id).min(1))
+export const RegulationsSchema = z
+  .object({
+    gen: z.enum(GEN_IDS),
+    regulations: z
+      .array(
+        z
+          .object({
+            id,
+            label: z.object({ en: z.string().min(1), de: z.string().min(1) }).strict(),
+            showdownFormat: z.string().min(1).optional(),
+            default: z.literal(true).optional(),
+            source: z.enum(['showdown', 'manual']),
+            verified: z.boolean().optional(),
+            species: idList,
+            items: idList,
+            moves: idList.optional(),
+            learnsets: z
+              .object({ add: delta.optional(), remove: delta.optional() })
+              .strict()
+              .optional(),
+          })
+          .strict(),
+      )
+      .min(1),
   })
   .strict()
 
@@ -111,6 +153,8 @@ export type Files = {
   dex: unknown
   learnsets: unknown
   sets: unknown
+  /** regulations.json; absent for generations without regulations */
+  regulations?: unknown
 }
 
 const fmt = (e: z.ZodError) =>
@@ -181,6 +225,36 @@ export function validateGen(gen: string, f: Files): { errors: string[]; warnings
       for (const m of s.moves) need(ids.moves, m, `set ${sid} move`)
     }
   }
+  if (f.regulations !== undefined) {
+    const regs = RegulationsSchema.safeParse(f.regulations)
+    if (!regs.success) errors.push(`${gen}/regulations.json: ${fmt(regs.error)}`)
+    else {
+      const r = regs.data
+      if (r.gen !== gen) errors.push(`${gen}/regulations.json: gen is "${r.gen}"`)
+      const rids = r.regulations.map((x) => x.id)
+      if (new Set(rids).size !== rids.length) errors.push(`${gen}/regulations.json: duplicate ids`)
+      if (rids.includes('none'))
+        errors.push(`${gen}/regulations.json: "none" is reserved for the synthetic No filter`)
+      if (r.regulations.filter((x) => x.default).length !== 1)
+        errors.push(`${gen}/regulations.json: exactly one regulation must be the default`)
+      for (const reg of r.regulations) {
+        const where = `${gen}/regulations.json ${reg.id}`
+        if (reg.source === 'manual' && reg.verified === undefined)
+          errors.push(`${where}: manual regulation without "verified"`)
+        const dangling = (list: string[] | undefined, set: Set<string>, kind: string) => {
+          const x = (list ?? []).filter((v) => !set.has(v))
+          if (x.length) errors.push(`${where}: ${x.length} ${kind} not in the dex, e.g. ${x[0]}`)
+        }
+        dangling(reg.species, ids.species, 'species')
+        dangling(reg.items, ids.items, 'items')
+        dangling(reg.moves, ids.moves, 'moves')
+        for (const d of [reg.learnsets?.add, reg.learnsets?.remove]) {
+          dangling(Object.keys(d ?? {}), ids.species, 'learnset species')
+          dangling(Object.values(d ?? {}).flat(), ids.moves, 'learnset moves')
+        }
+      }
+    }
+  }
   if (bad.length)
     errors.push(`${gen}: ${bad.length} dangling reference(s), e.g. ${bad.slice(0, 5).join('; ')}`)
   if (soft.length)
@@ -188,6 +262,25 @@ export function validateGen(gen: string, f: Files): { errors: string[]; warnings
       `${gen}: ${soft.length} species ability reference(s) missing from the abilities list, e.g. ${soft.slice(0, 3).join('; ')}`,
     )
   return { errors, warnings }
+}
+
+/** Per-regulation list sizes (id -> species/items/moves), 'moves' 0 when unrestricted. */
+export function regulationCountsOf(raw: unknown): Record<string, RegulationCounts> {
+  const regs = (
+    raw as {
+      regulations?: { id: string; species?: string[]; items?: string[]; moves?: string[] }[]
+    }
+  )?.regulations
+  return Object.fromEntries(
+    (Array.isArray(regs) ? regs : []).map((r) => [
+      r.id,
+      { species: r.species?.length ?? 0, items: r.items?.length ?? 0 },
+    ]),
+  )
+}
+export interface RegulationCounts {
+  species: number
+  items: number
 }
 
 export function countsOf(f: Files) {

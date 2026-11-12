@@ -88,6 +88,12 @@ export interface Team {
   uid: string
   name: string
   gen: GenId
+  /**
+   * Regulation the team is built for (id from src/data/generated/<gen>/regulations.json, or
+   * "none" = No filter). Absent in teams saved before regulations existed: the active regulation
+   * of the generation applies.
+   */
+  regulation?: string
   members: SavedSet[]
   createdAt: number
   updatedAt: number
@@ -137,6 +143,8 @@ export interface Settings {
   lang: Lang
   gen: GenId
   activeTeamUid?: string
+  /** Selected regulation per generation (absent = the generation's default regulation) */
+  regulations?: Partial<Record<GenId, string>>
   format: Format
   /** Device-local, excluded from backups. */
   supportNudge?: SupportNudge

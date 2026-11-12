@@ -9,6 +9,7 @@ import type { Status } from '../../engine/types'
 import { updateSet } from '../../state/app'
 import { investmentOf, STAT_ORDER, statLimits } from '../../state/sets'
 import type { Side } from '../../state/app'
+import { LegalBadge } from '../regulation/LegalBadge'
 
 interface Props {
   side: Side
@@ -105,6 +106,7 @@ function StatusChip({
 export function PokemonCard({ side, gen, set, onSearch, onEdit }: Props) {
   const t = useT()
   const lang = useApp((s) => s.lang)
+  const regulation = useApp((s) => s.regulation)
   const role = t(side === 'mine' ? 'card.mine' : 'card.opp')
 
   if (!set) {
@@ -158,6 +160,7 @@ export function PokemonCard({ side, gen, set, onSearch, onEdit }: Props) {
           ✎
         </button>
       </div>
+      <LegalBadge gen={gen} regulation={regulation} set={set} />
       {itemAbility.length > 0 && <p className="card__line">{itemAbility.join(' · ')}</p>}
       <p className="card__line card__line--muted card__spread">
         <span>{spreadSummary(gen, set, t)}</span>

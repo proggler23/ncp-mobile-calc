@@ -217,7 +217,7 @@
         }
       ],
       "gaps": [
-        "Data is the base Showdown gen9 ruleset (latest DLC); individual VGC regulations restrict the legal pool further."
+        "Data is the base Showdown gen9 ruleset (latest DLC); the legal pool of each VGC regulation is in regulations.json (learnsets are not restricted per regulation; pre-DLC regulations may offer moves the species only learns through DLC)."
       ]
     },
     "za": {
@@ -257,7 +257,7 @@
       "gaps": [
         "Source is the pokemon-showdown 'champions' mod (legal dex = isNonstandard null, Megas included, 20 PP cap, Mega Stones in items).",
         "Champions uses Stat Points instead of EVs: each point adds +1 to the stat (HP +1 too), 66 points total, max 32 per stat, IVs fixed at 31. In this data the \"evs\" fields of sets hold Stat Points. Verify limits against the Showdown validator when it lands (stat formula is stat + SP + 20; HP +75).",
-        "Regulation-specific legal pools (Reg M-A/M-B/M-C) are not separated; the base 'champions' mod is used."
+        "The dex is the union of the Reg M-B pool (the npm 'champions' mod) and the extra entries Reg M-C adds (regulations/manual.json); the legal pool of each regulation is in regulations.json."
       ]
     }
   }

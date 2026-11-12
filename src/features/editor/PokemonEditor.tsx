@@ -26,6 +26,7 @@ import type { StatKey } from '../../storage/types'
 import { emptySpread } from '../../storage/types'
 import { Field, Segmented, Stepper, Toggle } from '../../ui/controls'
 import { SearchOverlay } from '../../ui/SearchOverlay'
+import { LegalBadge } from '../regulation/LegalBadge'
 import './editor.css'
 import { own } from '../../own'
 
@@ -65,6 +66,8 @@ export interface PokemonEditorProps {
   battleState?: boolean
   /** Final stats the engine computed for this build (matchup screen); computed on demand if absent. */
   stats?: FinalStats
+  /** Regulation whose legal pool the pickers offer; defaults to the app's active regulation. */
+  regulation?: string
 }
 
 /**
@@ -77,9 +80,12 @@ export function PokemonEditor({
   onChange,
   battleState = true,
   stats,
+  regulation: regulationProp,
 }: PokemonEditorProps) {
   const t = useT()
   const lang = useApp((s) => s.lang)
+  const activeRegulation = useApp((s) => s.regulation)
+  const regulation = regulationProp ?? activeRegulation
   const [picker, setPicker] = useState<Picker>(null)
   const { bridge } = getLib()
   const meta = GEN_META[gen]
@@ -128,8 +134,13 @@ export function PokemonEditor({
   const sysLabel = (s: StatKey) =>
     meta.engineGen <= 2 && s === 'spa' ? t('stat.sp') : statLabel(s)
 
-  const megaForms = (rec?.formes ?? []).map((id) => speciesRecord(gen, id)).filter((r) => r?.isMega)
-  const baseRec = rec?.isMega && rec.base ? speciesRecord(gen, rec.base) : undefined
+  // Formes are offered only when legal in the regulation (strict, like the species picker).
+  const formeLegal = (id: string) => bridge.isSpeciesLegal(gen, regulation, id)
+  const megaForms = (rec?.formes ?? [])
+    .map((id) => speciesRecord(gen, id))
+    .filter((r) => r?.isMega && formeLegal(r.id))
+  const baseRec =
+    rec?.isMega && rec.base && formeLegal(rec.base) ? speciesRecord(gen, rec.base) : undefined
   const switchForme = (id: string, requiredItem?: string) => {
     const next = changeSpecies(gen, set, id)
     if (requiredItem && meta.hasItems) next.itemId = requiredItem
@@ -142,6 +153,7 @@ export function PokemonEditor({
     <div className="editor">
       <section className="editor__section" aria-labelledby="ed-basic">
         <h3 id="ed-basic">{t('ed.basics')}</h3>
+        <LegalBadge gen={gen} regulation={regulation} set={set} detail />
         <button type="button" className="picker" onClick={() => setPicker({ kind: 'species' })}>
           <span className="picker__label">{t('ed.species')}</span>
           <span className="picker__value">{name('species', set.speciesId)}</span>
@@ -202,15 +214,22 @@ export function PokemonEditor({
             </Field>
           )}
         </div>
-        {meta.hasAbilities && (
-          <button type="button" className="picker" onClick={() => setPicker({ kind: 'ability' })}>
-            <span className="picker__label">{t('ed.ability')}</span>
-            <span className="picker__value">
-              {set.abilityId ? name('abilities', set.abilityId) : t('ed.none')}
-            </span>
-            <span aria-hidden="true">🔍</span>
-          </button>
-        )}
+        {meta.hasAbilities &&
+          (abilities.length ? (
+            <button type="button" className="picker" onClick={() => setPicker({ kind: 'ability' })}>
+              <span className="picker__label">{t('ed.ability')}</span>
+              <span className="picker__value">
+                {set.abilityId ? name('abilities', set.abilityId) : t('ed.none')}
+              </span>
+              <span aria-hidden="true">🔍</span>
+            </button>
+          ) : (
+            // No ability data for this species: the calculator's own default ability applies.
+            <div className="picker picker--static" aria-disabled="true">
+              <span className="picker__label">{t('ed.ability')}</span>
+              <span className="picker__value">{t('ed.abilityDefault')}</span>
+            </div>
+          ))}
         {meta.hasItems && (
           <button type="button" className="picker" onClick={() => setPicker({ kind: 'item' })}>
             <span className="picker__label">{t('ed.item')}</span>
@@ -496,7 +515,7 @@ export function PokemonEditor({
         <SearchOverlay
           title={t('ed.species')}
           placeholder={t('search.species')}
-          items={speciesItems(gen, lang)}
+          items={speciesItems(gen, lang, regulation)}
           onClose={closePicker}
           onPick={(id) => {
             onChange(changeSpecies(gen, set, id))
@@ -508,7 +527,7 @@ export function PokemonEditor({
         <SearchOverlay
           title={t('ed.ability')}
           placeholder={t('search.ability')}
-          items={abilityItems(gen, lang, abilities.length ? abilities : undefined)}
+          items={abilityItems(gen, lang, abilities)}
           onClose={closePicker}
           onPick={(id) => {
             patch({ abilityId: id })
@@ -520,7 +539,7 @@ export function PokemonEditor({
         <SearchOverlay
           title={t('ed.item')}
           placeholder={t('search.item')}
-          items={itemItems(gen, lang)}
+          items={itemItems(gen, lang, regulation)}
           clearLabel={t('ed.noItem')}
           onClose={closePicker}
           onPick={(id) => {
@@ -534,7 +553,7 @@ export function PokemonEditor({
       )}
       {picker?.kind === 'move' &&
         (() => {
-          const { items, reliable } = moveItems(gen, set.speciesId, lang)
+          const { items, reliable } = moveItems(gen, set.speciesId, lang, regulation)
           return (
             <SearchOverlay
               title={t('ed.move', { n: picker.slot + 1 })}

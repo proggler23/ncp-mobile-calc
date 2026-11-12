@@ -13,10 +13,20 @@ export interface DataVersionInfo {
   showdownVersion: string
   /** Smogon usage months (YYYY-MM) behind each generation's common sets (frozen gens included) */
   usageMonths: Record<string, string[]>
+  /** Which source each regulation's legal pool was built from (generations without regulations are absent) */
+  regulations?: Record<string, Record<string, RegulationSourceInfo>>
   /** Date (YYYY-MM-DD) the German names snapshot was built from PokeAPI */
   namesSnapshotDate: string
   /** ISO timestamp of the last data build that changed anything */
   builtAt: string
+}
+
+export interface RegulationSourceInfo {
+  /** 'showdown': derived from the pinned pokemon-showdown package; 'manual': manual.json */
+  source: 'showdown' | 'manual'
+  showdownFormat?: string
+  /** manual entries: false = not verified against an authoritative source */
+  verified?: boolean
 }
 
 export function getDataVersionInfo(): DataVersionInfo {

@@ -48,14 +48,14 @@ cannot be calculated.
 | sv | moves | 928 | 681 | 208 | 0 | 39 | 685 | 681 | 4 |
 | sv | items | 320 | 182 | 136 | 2 | 0 | 249 | 182 | 67 |
 | sv | abilities | 306 | 306 | 0 | 0 | 0 | 310 | 310 | 0 |
-| za | species | 495 | 492 | 0 | 3 | 0 | 513 | 512 | 1 |
+| za | species | 495 | 492 | 1 | 2 | 0 | 513 | 512 | 1 |
 | za | moves | 340 | 312 | 27 | 1 | 0 | 312 | 312 | 0 |
-| za | items | 170 | 70 | 89 | 11 | 0 | 249 | 70 | 179 |
+| za | items | 170 | 70 | 94 | 6 | 0 | 249 | 70 | 179 |
 | za | abilities | 0 | 0 | 0 | 0 | 0 | 203 | 0 | 203 |
-| champions | species | 1247 | 317 | 924 | 2 | 4 | 333 | 329 | 4 |
-| champions | moves | 929 | 495 | 394 | 0 | 40 | 496 | 495 | 1 |
-| champions | items | 365 | 148 | 204 | 5 | 8 | 148 | 148 | 0 |
-| champions | abilities | 313 | 207 | 105 | 1 | 0 | 210 | 210 | 0 |
+| champions | species | 1247 | 348 | 894 | 1 | 4 | 368 | 364 | 4 |
+| champions | moves | 929 | 510 | 379 | 0 | 40 | 511 | 510 | 1 |
+| champions | items | 365 | 166 | 191 | 0 | 8 | 166 | 166 | 0 |
+| champions | abilities | 313 | 221 | 91 | 1 | 0 | 224 | 224 | 0 |
 
 ## rby (engine gen 1)
 
@@ -401,7 +401,7 @@ Showdown-only (0): -
 
 ### species
 
-NCP-only, default dex (3): Aegislash-Shield, Mega Garchomp Z, Mega Tatsugiri
+NCP-only, default dex (2): Aegislash-Shield, Mega Tatsugiri
 
 NCP-only, National Dex only (0): -
 
@@ -417,7 +417,7 @@ Showdown-only (0): -
 
 ### items
 
-NCP-only, default dex (11): Heatranite, Darkranite, Zygardite, Zeraorite, Absolite Z, Garchompite Z, Lucarionite Z, Golisopite, Magearnite, Baxcalibrite, Tatsugirinite
+NCP-only, default dex (6): Heatranite, Darkranite, Zygardite, Zeraorite, Magearnite, Tatsugirinite
 
 NCP-only, National Dex only (0): -
 
@@ -435,7 +435,7 @@ Showdown-only (203): Adaptability, Aerilate, Aftermath, Air Lock, Analytic, Ange
 
 ### species
 
-NCP-only, default dex (2): Aegislash-Shield, Mega Garchomp Z
+NCP-only, default dex (1): Aegislash-Shield
 
 NCP-only, National Dex only (4): Wishiwashi-Solo, Minior-Up, Minior-Down, Mega Tatsugiri
 
@@ -451,7 +451,7 @@ Showdown-only (1): Spit Up
 
 ### items
 
-NCP-only, default dex (5): Absolite Z, Garchompite Z, Lucarionite Z, Golisopite, Baxcalibrite
+NCP-only, default dex (0): -
 
 NCP-only, National Dex only (8): Luck Incense, Pure Incense, Zygardite, Heatranite, Darkranite, Zeraorite, Magearnite, Tatsugirinite
 

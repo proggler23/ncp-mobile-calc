@@ -130,8 +130,47 @@ export interface CommonSet {
 /** species id -> up to 3 sets */
 export type SetsFile = Record<string, CommonSet[]>
 
+/** Per-regulation changes to the generation's learnsets (species id -> move ids). */
+export interface LearnsetDelta {
+  add?: Record<string, string[]>
+  remove?: Record<string, string[]>
+}
+
+/**
+ * One regulation (legal pool) of a generation, see scripts/build-data/regulations.ts. 'No filter'
+ * (`NO_REGULATION`) is synthetic and not part of the file.
+ */
+export interface RegulationRecord {
+  id: string
+  label: { en: string; de: string }
+  /** Showdown format the pool was derived from (informational for manual entries) */
+  showdownFormat?: string
+  /** The regulation selected by default (exactly one per file) */
+  default?: true
+  /** 'showdown': derived from the pinned package; 'manual': hand-maintained manual.json */
+  source: 'showdown' | 'manual'
+  /** manual entries only: false = could not be verified against an authoritative source */
+  verified?: boolean
+  /** Legal species (incl. formes/Megas) as ids of this generation's dex */
+  species: string[]
+  items: string[]
+  /** Only present when the regulation restricts moves beyond the learnsets (subset of the dex) */
+  moves?: string[]
+  learnsets?: LearnsetDelta
+}
+
+export interface RegulationsFile {
+  gen: GenId
+  regulations: RegulationRecord[]
+}
+
+/** Id of the synthetic "No filter" regulation (available for every generation). */
+export const NO_REGULATION = 'none'
+
 export interface GenData extends DexFile {
   learnsets: Learnsets
+  /** Regulations of this generation (empty when it has none: only "No filter" exists). */
+  regulations: RegulationRecord[]
   /** Lazily loaded (separate chunk). */
   loadSets: () => Promise<SetsFile>
 }

@@ -45,8 +45,16 @@ export interface Repository {
   readonly kind: Backend['kind']
   listTeams(): Promise<Team[]>
   getTeam(uid: string): Promise<Team | undefined>
-  createTeam(input: { name: string; gen: GenId; members?: SavedSet[] }): Promise<Team>
-  updateTeam(uid: string, patch: Partial<Pick<Team, 'name' | 'gen' | 'members'>>): Promise<Team>
+  createTeam(input: {
+    name: string
+    gen: GenId
+    regulation?: string
+    members?: SavedSet[]
+  }): Promise<Team>
+  updateTeam(
+    uid: string,
+    patch: Partial<Pick<Team, 'name' | 'gen' | 'members' | 'regulation'>>,
+  ): Promise<Team>
   deleteTeam(uid: string): Promise<void>
   getActiveTeam(): Promise<Team | undefined>
   setActiveTeam(uid: string | undefined): Promise<Settings>
@@ -106,12 +114,20 @@ export function createRepository(backend: Backend): Repository {
     async getTeam(uid) {
       return parseTeam(await backend.get('teams', uid))
     },
-    async createTeam({ name, gen, members = [] }) {
+    async createTeam({ name, gen, regulation, members = [] }) {
       if ((await loadTeams()).length >= LIMITS.maxTeams)
         throw new StorageError(`At most ${LIMITS.maxTeams} teams`, 'limit')
       const now = Date.now()
       const team = checked(
-        parseTeam({ uid: newUid(), name, gen, members, createdAt: now, updatedAt: now }),
+        parseTeam({
+          uid: newUid(),
+          name,
+          gen,
+          ...(regulation ? { regulation } : {}),
+          members,
+          createdAt: now,
+          updatedAt: now,
+        }),
         'team',
       )
       await backend.put('teams', team.uid, team)

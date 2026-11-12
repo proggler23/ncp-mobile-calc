@@ -44,6 +44,41 @@
     ],
     "za": []
   },
+  "regulations": {
+    "champions": {
+      "regmc": {
+        "source": "manual",
+        "showdownFormat": "[Gen 9 Champions] VGC 2026 Reg M-C",
+        "verified": true
+      },
+      "regmb": {
+        "source": "showdown",
+        "showdownFormat": "[Gen 9 Champions] VGC 2026 Reg M-B"
+      },
+      "regma": {
+        "source": "showdown",
+        "showdownFormat": "[Gen 9 Champions] VGC 2026 Reg M-A"
+      }
+    },
+    "sv": {
+      "regi": {
+        "source": "showdown",
+        "showdownFormat": "[Gen 9] VGC 2025 Reg I"
+      },
+      "regg": {
+        "source": "showdown",
+        "showdownFormat": "[Gen 9] VGC 2024 Reg G"
+      },
+      "regd": {
+        "source": "showdown",
+        "showdownFormat": "[Gen 9] VGC 2023 Reg D"
+      },
+      "regc": {
+        "source": "showdown",
+        "showdownFormat": "[Gen 9] VGC 2023 Reg C"
+      }
+    }
+  },
   "namesSnapshotDate": "2026-11-12",
-  "builtAt": "2026-11-12T09:52:14.214Z"
+  "builtAt": "2026-11-12T12:47:02.752Z"
 }

@@ -50,14 +50,14 @@ export interface RawGen {
 }
 
 // Minimal structural types for the parts of the Dex API we use (Showdown Dex API).
-interface DexEntity {
+export interface DexEntity {
   id: string
   name: string
   exists: boolean
   isNonstandard?: string | null
   gen?: number
 }
-interface DexSpecies extends DexEntity {
+export interface DexSpecies extends DexEntity {
   num: number
   types: string[]
   baseStats: { hp: number; atk: number; def: number; spa: number; spd: number; spe: number }
@@ -72,14 +72,14 @@ interface DexSpecies extends DexEntity {
   changesFrom?: string
   battleOnly?: string | string[]
 }
-interface DexMove extends DexEntity {
+export interface DexMove extends DexEntity {
   type: string
   category: 'Physical' | 'Special' | 'Status'
   basePower: number
   /** true for generic Max moves, the species name for G-Max signature moves */
   isMax?: boolean | string
 }
-interface DexLike {
+export interface DexLike {
   species: {
     get(n: string): DexSpecies
     all(): DexSpecies[]
@@ -349,8 +349,41 @@ function finish(
 
 // --------------------------------------------------- Showdown data-mod path
 
+/**
+ * Entities that a hand-maintained regulation (regulations/manual.json) makes legal although the
+ * pinned Showdown mod still flags them non-standard. They are added to the dex regardless.
+ */
+export interface Extras {
+  species: string[]
+  items: string[]
+  moves: string[]
+}
+const NO_EXTRAS: Extras = { species: [], items: [], moves: [] }
+
 interface PsDexModule {
   Dex: { mod(id: string): DexLike; forGen(gen: number): DexLike }
+}
+/** The parts of the Showdown API the regulation derivation uses. */
+export interface ShowdownApi {
+  Dex: {
+    mod(id: string): DexLike
+    formats: { get(name: string): { exists: boolean; mod: string; name: string } }
+  }
+  TeamValidator: new (format: string) => {
+    dex: DexLike
+    checkSpecies(
+      set: { name: string; species: string },
+      species: DexSpecies,
+      tierSpecies: DexSpecies,
+      setHas: Record<string, boolean>,
+    ): string | null
+    checkItem(
+      set: { name: string },
+      item: DexEntity,
+      setHas: Record<string, boolean>,
+    ): string | null
+    checkMove(set: { name: string }, move: DexMove, setHas: Record<string, boolean>): string | null
+  }
 }
 let psDexModule: PsDexModule | undefined
 function loadPsDex() {
@@ -362,11 +395,21 @@ function loadPsDex() {
   return psDexModule.Dex
 }
 
-function loadPsMod(cfg: GenConfig & { source: { kind: 'ps' } }): RawGen {
+function loadPsMod(cfg: GenConfig & { source: { kind: 'ps' } }, extras: Extras): RawGen {
   const { mod, learnGen } = cfg.source
   const dex = loadPsDex().mod(mod)
   const legal = (e: DexEntity) => e.exists && !e.isNonstandard
-  const speciesAll = dex.species.all().filter((s) => legal(s) && !s.isCosmeticForme && s.num > 0)
+  for (const [kind, ids] of Object.entries(extras) as [keyof Extras, string[]][]) {
+    for (const id of ids) {
+      if (!dex[kind].get(id).exists) throw new Error(`${cfg.id}: extra ${kind} "${id}" is unknown`)
+    }
+  }
+  const xs = new Set(extras.species)
+  const xi = new Set(extras.items)
+  const xm = new Set(extras.moves)
+  const speciesAll = dex.species
+    .all()
+    .filter((s) => (legal(s) || xs.has(s.id)) && !s.isCosmeticForme && s.num > 0)
   const species = speciesAll.map((s) => toRawSpecies(s, dex))
   const speciesIds = new Set(species.map((s) => s.id))
   // Drop prevo/evo/base links to species that are not in this mod's dex.
@@ -409,7 +452,7 @@ function loadPsMod(cfg: GenConfig & { source: { kind: 'ps' } }): RawGen {
   }
   const moves: RawMove[] = dex.moves
     .all()
-    .filter((m) => legal(m) && usedMoves.has(m.id))
+    .filter((m) => (legal(m) && usedMoves.has(m.id)) || xm.has(m.id))
     .map((m) => ({
       id: m.id,
       name: m.name,
@@ -424,13 +467,18 @@ function loadPsMod(cfg: GenConfig & { source: { kind: 'ps' } }): RawGen {
     if (ids.length) learnsets[sid] = ids
   }
   const usedAbilities = new Set(species.flatMap((s) => [...s.abilities, s.hiddenAbility ?? '']))
+  const extraAbilities = new Set(
+    species.filter((s) => xs.has(s.id)).flatMap((s) => [...s.abilities, s.hiddenAbility ?? '']),
+  )
   const abilities: RawNamed[] = dex.abilities
     .all()
-    .filter((a) => legal(a) && usedAbilities.has(a.id))
+    .filter(
+      (a) => a.exists && usedAbilities.has(a.id) && (!a.isNonstandard || extraAbilities.has(a.id)),
+    )
     .map((a) => ({ id: a.id, name: a.name }))
   const items: RawNamed[] = dex.items
     .all()
-    .filter(legal)
+    .filter((i) => legal(i) || xi.has(i.id))
     .map((i) => ({ id: i.id, name: i.name }))
 
   return finish(
@@ -444,11 +492,19 @@ function loadPsMod(cfg: GenConfig & { source: { kind: 'ps' } }): RawGen {
   )
 }
 
-export async function loadRawGen(cfg: GenConfig): Promise<RawGen> {
+export async function loadRawGen(cfg: GenConfig, extras: Extras = NO_EXTRAS): Promise<RawGen> {
   if (cfg.source.kind === 'gen') {
+    if (extras.species.length || extras.items.length || extras.moves.length)
+      throw new Error(`${cfg.id}: manual extra entities are only supported for Showdown mods`)
     return loadGenSource(cfg as GenConfig & { source: { kind: 'gen' } })
   }
-  return loadPsMod(cfg as GenConfig & { source: { kind: 'ps' } })
+  return loadPsMod(cfg as GenConfig & { source: { kind: 'ps' } }, extras)
+}
+
+/** Showdown's Dex / TeamValidator for the regulation derivation (same pinned package). */
+export function showdownApi() {
+  const req = createRequire(path.resolve(import.meta.dirname, '../../package.json'))
+  return req('pokemon-showdown') as ShowdownApi
 }
 
 export { nameKey }

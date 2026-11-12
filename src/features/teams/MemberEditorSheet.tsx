@@ -7,11 +7,13 @@ import { PokemonEditor } from '../editor/PokemonEditor'
 /** Edits one team member on a local draft; only "Save" writes it back. */
 export function MemberEditorSheet({
   gen,
+  regulation,
   initial,
   onSave,
   onClose,
 }: {
   gen: DataGenId
+  regulation?: string
   initial: SavedSetLike
   onSave: (set: SavedSetLike) => void
   onClose: () => void
@@ -20,7 +22,13 @@ export function MemberEditorSheet({
   const [draft, setDraft] = useState(initial)
   return (
     <Dialog title={t('teams.editMember')} onClose={onClose} closeLabel={t('common.close')}>
-      <PokemonEditor gen={gen} value={draft} onChange={setDraft} battleState={false} />
+      <PokemonEditor
+        gen={gen}
+        regulation={regulation}
+        value={draft}
+        onChange={setDraft}
+        battleState={false}
+      />
       <div className="sheet-actions">
         <button type="button" className="btn" onClick={onClose}>
           {t('common.cancel')}

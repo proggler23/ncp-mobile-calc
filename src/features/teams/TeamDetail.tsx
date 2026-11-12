@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { GEN_META } from '../../bridge/gens'
 import { setGen } from '../../state/app'
 import { speciesItems } from '../../state/catalog'
+import { regulationChoices, regulationName, teamRegulation } from '../../state/regulation'
 import { useApp, useT } from '../../state/hooks'
 import { getLib } from '../../state/lib'
 import { goBack, navigate } from '../../state/route'
@@ -12,6 +13,7 @@ import {
   moveMember,
   removeMember,
   renameTeam,
+  setTeamRegulation,
   switchActiveTeam,
   teamPaste,
   updateMember,
@@ -21,6 +23,7 @@ import { SearchOverlay } from '../../ui/SearchOverlay'
 import { ConfirmDialog, NameDialog } from '../../ui/prompts'
 import { ExportDialog } from './ExportDialog'
 import { MemberEditorSheet } from './MemberEditorSheet'
+import { LegalBadge } from '../regulation/LegalBadge'
 import { PasteImportDialog } from './PasteImportDialog'
 import { useRunner } from './useRunner'
 
@@ -44,6 +47,7 @@ export function TeamDetail({ team }: { team: Team }) {
   const t = useT()
   const lang = useApp((s) => s.lang)
   const gen = useApp((s) => s.gen)
+  const activeRegulation = useApp((s) => s.regulation)
   const active = useApp((s) => s.team?.uid === team.uid)
   const busy = useApp((s) => s.status === 'loading')
   const [modal, setModal] = useState<Modal>(null)
@@ -52,6 +56,8 @@ export function TeamDetail({ team }: { team: Team }) {
   const sameGen = team.gen === gen
   const full = team.members.length >= LIMITS.maxMembers
   const name = (id: string) => (sameGen ? getLib().bridge.speciesDisplayName(gen, id, lang) : id)
+  // The regulation data of a generation is only loaded while it is the active one.
+  const regulation = sameGen ? teamRegulation(team, activeRegulation) : undefined
 
   return (
     <section className="teams" aria-labelledby="team-title">
@@ -74,6 +80,22 @@ export function TeamDetail({ team }: { team: Team }) {
       <p className="muted">
         {GEN_META[team.gen].label} · {t('teams.count', { n: team.members.length })}
       </p>
+      {regulation !== undefined && (
+        <label className="field">
+          <span className="field__label">{t('reg.teamFor')}</span>
+          <select
+            className="select"
+            value={regulation}
+            onChange={(e) => void run(() => setTeamRegulation(team.uid, e.target.value))}
+          >
+            {regulationChoices(gen).map((id) => (
+              <option key={id} value={id}>
+                {regulationName(gen, id, lang)}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
 
       {error && (
         <p className="notice notice--error" role="alert">
@@ -125,6 +147,9 @@ export function TeamDetail({ team }: { team: Team }) {
                 >
                   <span className="member__name">{label}</span>
                   {sameGen && <span className="member__sub">{memberSummary(gen, m, lang)}</span>}
+                  {regulation !== undefined && (
+                    <LegalBadge gen={gen} regulation={regulation} set={m} />
+                  )}
                 </button>
                 <div className="member__btns">
                   <button
@@ -221,7 +246,7 @@ export function TeamDetail({ team }: { team: Team }) {
         <SearchOverlay
           title={t('teams.addTitle')}
           placeholder={t('search.species')}
-          items={speciesItems(team.gen, lang)}
+          items={speciesItems(team.gen, lang, regulation)}
           onClose={close}
           onPick={(id) => {
             close()
@@ -236,6 +261,7 @@ export function TeamDetail({ team }: { team: Team }) {
       {typeof modal === 'object' && modal && (
         <MemberEditorSheet
           gen={team.gen}
+          regulation={regulation}
           initial={savedToSet(modal.edit)}
           onSave={(set) => void run(() => updateMember(team.uid, modal.edit.uid, set))}
           onClose={close}

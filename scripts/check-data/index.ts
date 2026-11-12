@@ -19,10 +19,18 @@ import {
   writeFileSync,
 } from 'node:fs'
 import path from 'node:path'
-import { compareCounts, compareCoverage, makeResult, mergeResults, renderMarkdown } from './gates'
+import {
+  compareCounts,
+  compareCoverage,
+  compareRegulationCounts,
+  makeResult,
+  mergeResults,
+  renderMarkdown,
+} from './gates'
 import type { CheckResult, Coverage, CountMap, GateResult, Reason } from './gates'
-import { countsOf, validateGen, VersionSchema } from './schema'
-import type { Files } from './schema'
+import { countsOf, regulationCountsOf, validateGen, VersionSchema } from './schema'
+import { GENS } from '../build-data/config'
+import type { Files, RegulationCounts } from './schema'
 
 const ROOT = path.resolve(import.meta.dirname, '../..')
 const GENERATED = 'src/data/generated'
@@ -79,13 +87,25 @@ function main() {
 
   // 1. schema + referential validation of every gen (frozen gens included)
   const cur: CountMap = {}
+  const curReg: Record<string, RegulationCounts> = {}
   const schemaErrors: string[] = []
   const gens = genDirs()
   for (const gen of gens) {
+    const regFile = `${GENERATED}/${gen}/regulations.json`
     const files: Files = {
       dex: readJson(`${GENERATED}/${gen}/dex.json`),
       learnsets: readJson(`${GENERATED}/${gen}/learnsets.json`),
       sets: readJson(`${GENERATED}/${gen}/sets.json`),
+      ...(existsSync(path.join(ROOT, regFile)) ? { regulations: readJson(regFile) } : {}),
+    }
+    // config.ts lists regulations for this gen -> the file must exist with exactly those ids
+    const wanted = GENS.find((g) => g.id === gen)?.regulations?.map((r) => r.id) ?? []
+    const have = regulationCountsOf(files.regulations)
+    for (const w of wanted)
+      if (!(w in have))
+        schemaErrors.push(`${gen}/regulations.json: regulation "${w}" (config.ts) is missing`)
+    for (const [rid, c] of Object.entries(have)) {
+      curReg[`${gen}/${rid}`] = c
     }
     const v = validateGen(gen, files)
     schemaErrors.push(...v.errors)
@@ -122,10 +142,31 @@ function main() {
       status: r.some((x) => x.level === 'fail') ? 'fail' : r.length ? 'anomaly' : 'pass',
       detail: `vs ${BASE}`,
     })
+    // legal pools of the regulations (only compared when the baseline already had them)
+    const prevReg: Record<string, RegulationCounts> = {}
+    for (const gen of gens) {
+      const base = gitShow(`${GENERATED}/${gen}/regulations.json`)
+      for (const [rid, c] of Object.entries(regulationCountsOf(base))) prevReg[`${gen}/${rid}`] = c
+    }
+    if (Object.keys(prevReg).length) {
+      const rr = compareRegulationCounts(prevReg, curReg)
+      reasons.push(...rr.reasons)
+      metrics.regulationDeltas = rr.deltas
+      checks.push({
+        name: 'regulation-count-delta',
+        status: rr.reasons.some((x) => x.level === 'fail')
+          ? 'fail'
+          : rr.reasons.length
+            ? 'anomaly'
+            : 'pass',
+        detail: `${Object.keys(curReg).length} regulations vs ${BASE}`,
+      })
+    }
   } else {
     notes.push(`No committed snapshot at ${BASE}; count-delta check skipped.`)
   }
   metrics.counts = cur
+  metrics.regulationCounts = curReg
 
   // 3. bridge coverage diff (the bridge build is offline and deterministic)
   if (!flag('--no-bridge')) {

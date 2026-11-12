@@ -20,6 +20,7 @@ import {
 import { LIMITS } from '../storage/types'
 import { getRepository, reloadLibrary, selectTeamMember, setGen, store } from './app'
 import { getLib } from './lib'
+import { problemText, regulationName } from './regulation'
 import { blankSet } from './sets'
 import { noteTeamSaved } from './supportNudge'
 
@@ -112,11 +113,19 @@ function clearTeamSelection(uid: string): void {
 // Teams
 // ---------------------------------------------------------------------------------------------
 
+/** The regulation a new team of `gen` starts with: the one the user has selected for it. */
+function startRegulation(gen: DataGenId): string | undefined {
+  const s = store.get()
+  return gen === s.gen ? s.regulation : s.regulations[gen]
+}
+
 async function createTeamU(name: string, gen: DataGenId, members: SavedSet[]): Promise<Team> {
   const r = await repo()
+  const regulation = startRegulation(gen)
   const t = await r.createTeam({
     name: name.trim() || translate(store.get().lang, 'team.defaultName'),
     gen,
+    ...(regulation ? { regulation } : {}),
     members,
   })
   if (!store.get().team) await r.setActiveTeam(t.uid)
@@ -136,6 +145,13 @@ export function renameTeam(uid: string, name: string): Promise<void> {
   })
 }
 
+export function setTeamRegulation(uid: string, regulation: string): Promise<void> {
+  return locked(async () => {
+    await (await repo()).updateTeam(uid, { regulation })
+    await reloadLibrary()
+  })
+}
+
 export function deleteTeam(uid: string): Promise<void> {
   return locked(async () => {
     await (await repo()).deleteTeam(uid)
@@ -150,7 +166,14 @@ export function duplicateTeam(uid: string, copyLabel: string): Promise<Team> {
     const src = await team(uid)
     const members = src.members.map((m) => ({ ...structuredClone(m), uid: newUid() }))
     const name = `${src.name} ${copyLabel}`.slice(0, LIMITS.maxNameLength)
-    const t = await (await repo()).createTeam({ name, gen: src.gen, members })
+    const t = await (
+      await repo()
+    ).createTeam({
+      name,
+      gen: src.gen,
+      ...(src.regulation ? { regulation: src.regulation } : {}),
+      members,
+    })
     await reloadLibrary()
     return t
   })
@@ -169,11 +192,15 @@ export function setActiveTeam(uid: string | undefined): Promise<void> {
 // ---------------------------------------------------------------------------------------------
 
 /** A fresh member: the species' most used ("Common") set, else the neutral build. */
-export async function defaultSet(gen: DataGenId, speciesId: string): Promise<SavedSetLike> {
+export async function defaultSet(
+  gen: DataGenId,
+  speciesId: string,
+  regulation?: string,
+): Promise<SavedSetLike> {
   const { bridge } = getLib()
   let sets: Awaited<ReturnType<typeof bridge.loadCommonSets>>
   try {
-    sets = await bridge.loadCommonSets(gen, speciesId)
+    sets = await bridge.loadCommonSets(gen, speciesId, regulation)
   } catch {
     sets = undefined
   }
@@ -184,8 +211,9 @@ export async function defaultSet(gen: DataGenId, speciesId: string): Promise<Sav
 
 export async function addMember(teamUid: string, speciesId: string): Promise<void> {
   // The (async) default set is computed before taking the lock; the team is read inside it.
-  const gen = (await team(teamUid)).gen
-  const set = await defaultSet(gen, speciesId)
+  const tm = await team(teamUid)
+  const gen = tm.gen
+  const set = await defaultSet(gen, speciesId, tm.regulation ?? startRegulation(gen))
   await locked(async () => {
     const t = await team(teamUid)
     if (t.members.length >= LIMITS.maxMembers) throw new StorageError('Team is full', 'limit')
@@ -261,6 +289,26 @@ export async function importPasteAsTeam(
   const { members, warnings } = importPaste(text, gen, data)
   if (members.length === 0) return { imported: 0, warnings }
   const target = opts.target
+  // Illegal entries are kept, but the user is told (under the regulation the team will have).
+  const s = store.get()
+  const targetTeam = target ? s.teams.find((x) => x.uid === target) : undefined
+  const { bridge } = getLib()
+  const regulation = bridge.resolveRegulationId(
+    gen,
+    targetTeam?.regulation ?? (gen === s.gen ? s.regulation : s.regulations[gen]),
+  )
+  const regName = regulationName(gen, regulation, s.lang)
+  for (const m of members) {
+    const problems = bridge.buildProblems(gen, regulation, m)
+    if (!problems) continue
+    warnings.push(
+      translate(s.lang, 'reg.pasteIllegal', {
+        name: bridge.speciesDisplayName(gen, m.speciesId, s.lang),
+        reg: regName,
+        what: problemText(gen, problems, m, s.lang),
+      }),
+    )
+  }
   const t = await locked(() =>
     target ? write(target, members) : createTeamU(opts.name, gen, members),
   )

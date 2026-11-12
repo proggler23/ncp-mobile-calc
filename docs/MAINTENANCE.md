@@ -74,6 +74,8 @@ in the NCP sync result, `--base <ref>` to compare against another commit than `H
 | `build:bridge`, lint, typecheck, tests (incl. goldens) or build fail                                                                                                                      | fail    |
 | species/moves/items/abilities/learnsets/sets count drops by more than 5% vs the previous committed snapshot (per gen)                                                                     | anomaly |
 | ... by 50% or more, or a gen's data disappears                                                                                                                                            | fail    |
+| a regulation's legal species/items drop by more than 5% vs the previous snapshot (per `<gen>/<regulation>`)                                                                               | anomaly |
+| ... by 50% or more, or a regulation disappears; regulations.json invalid (dangling ids, no/two defaults, manual entry without `verified`, regulation of `config.ts` missing)              | fail    |
 | a new unmatched NCP<->Showdown entity appears (`src/bridge/generated/coverage.json`, either side)                                                                                         | anomaly |
 | more than 10% of golden scenarios changed after an NCP sync                                                                                                                               | anomaly |
 | NCP structural change: vendored file removed/renamed upstream, no longer loaded by a page, or a new script that is neither vendored nor on the ignore list (`scripts/ncp-sync/config.ts`) | anomaly |
@@ -113,6 +115,26 @@ clone is only copied and served to the headless browser).
 `pokemon-showdown` is pinned to an exact version (devDependency). Dependabot opens separate PRs
 for it. After merging a bump run `npm run build:data` (active gens; `-- --all` if frozen gens
 should pick up fixes too), review the diff, commit. The weekly job also picks it up for active gens.
+Check `npm view pokemon-showdown versions` for a release that contains a newer Champions / VGC
+format (`config/formats.js` in the tarball) and then update the regulations, see below.
+
+## Regulations
+
+Each regulation (a legal pool: species, items, moves) of `champions` and `sv` is built into
+`src/data/generated/<gen>/regulations.json`; the app's pickers show exactly that pool ("No filter" =
+everything the engine knows). Regulations are listed in `scripts/build-data/config.ts`
+(`GenConfig.regulations`, one `default`), derived from the pinned Showdown formats or kept by hand in
+`scripts/build-data/regulations/manual.json` (schema and procedure: `scripts/build-data/README.md`).
+
+- **New Champions regulation (e.g. M-D)**: add it to `config.ts` (first = newest, mark `default`), add
+  a `manual.json` entry (`base` = the previous regulation + `addSpecies` / `addItems` / `addMoves` /
+  `learnsets` / `removeSpecies` ...; `verified: true` only with an authoritative source, put the
+  source in `source`), then `npm run build:data` and `npm run build:bridge`. When Showdown ships the
+  format, move the regulation to `format` and delete the manual entry.
+- **Active vs frozen**: `champions` is active, so the weekly refresh rebuilds its regulations; `sv` is
+  frozen (rebuilt with `--gen sv` / `--all`).
+- The state of the lists is visible in-app (menu -> data sources: active regulation and whether its
+  list is derived or hand-maintained) and in `version.json` (`regulations`).
 
 ## Roll back
 

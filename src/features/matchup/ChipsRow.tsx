@@ -2,8 +2,10 @@ import { GEN_META } from '../../bridge/gens'
 import { selectTeamMember, setGen } from '../../state/app'
 import { useApp, useT } from '../../state/hooks'
 import { getLib } from '../../state/lib'
+import { buildProblemsOf, regulationName } from '../../state/regulation'
 import { switchActiveTeam } from '../../state/teams'
 import { NavLink } from '../../ui/NavLink'
+import '../regulation/legal.css'
 
 function TeamSwitcher() {
   const t = useT()
@@ -47,6 +49,7 @@ export function ChipsRow() {
   const gen = useApp((s) => s.gen)
   const lang = useApp((s) => s.lang)
   const selected = useApp((s) => s.mineTeamIndex)
+  const regulation = useApp((s) => s.regulation)
 
   if (teams.length === 0) {
     return (
@@ -90,6 +93,16 @@ export function ChipsRow() {
             onClick={() => selectTeamMember(i)}
           >
             {bridge.speciesDisplayName(gen, m.speciesId, lang)}
+            {buildProblemsOf(gen, regulation, m) && (
+              <span
+                className="chip__warn"
+                title={t('reg.notLegal', { reg: regulationName(gen, regulation, lang) })}
+                role="img"
+                aria-label={t('reg.notLegal', { reg: regulationName(gen, regulation, lang) })}
+              >
+                {' ⚠'}
+              </span>
+            )}
           </button>
         ))}
       </div>
