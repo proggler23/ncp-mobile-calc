@@ -22,3 +22,18 @@
 .menu__row > .btn {
   flex: 1 1 auto;
 }
+
+.data-info {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 2px 12px;
+  margin: 8px 0 0;
+  font-size: 0.8125rem;
+}
+.data-info dt {
+  color: var(--muted);
+}
+.data-info dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
