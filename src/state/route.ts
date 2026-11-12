@@ -54,3 +54,15 @@ export function goBack(fallback = '/'): void {
     }
   })
 }
+
+/** Replace the current entry with `path` (keeps the history depth) and notify the router. */
+export function replaceRoute(path: string): void {
+  whenOverlaysSettled(() => {
+    history.replaceState(
+      { ncpDepth: depth() },
+      '',
+      `${location.pathname}${location.search}#${path}`,
+    )
+    emit()
+  })
+}

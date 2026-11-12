@@ -82,6 +82,31 @@ Key points:
   menu already fill the row (16px text, 44px targets), so below 560px it gets its own full-width row
   under them; from 560px it sits next to the gen select. Only gens with regulations show it.
 
+## Sharing calcs
+
+- **Trigger:** long-press (500 ms, `ui/useLongPress`) on a result row, or the "Share" button in the
+  expanded details, opens `features/matchup/ShareSheet` (a normal `Dialog`, so Back closes it) with
+  Share / Copy text / Copy link. Status ("-") rows can be shared too; the text is NCP's message as shown.
+- **Message** (`state/share.ts`): line 1 = the row as displayed (`moveLine`), line 2 = regulation (or
+  the generation label for "No filter") - format - field effects (`state/fieldSummary.ts`, shared with
+  the field summary), line 3 = the link. Share uses `navigator.share({title, text: lines 1-2, url})`;
+  without Web Share the full text is copied. "Copy text" copies lines 1-3, "Copy link" only the link.
+- **Link:** `<origin><BASE_URL>#/c/v1.<payload>`. The payload (`src/share/codec.ts`, pure) is compact
+  positional JSON (defaults omitted; nicknames and notes are never shared), deflate-raw compressed
+  when `CompressionStream` exists, then base64url. `v1r.` marks the uncompressed fallback. Versions
+  are append-only: old links keep decoding through their own decoder.
+- **Opening:** `App` calls `openSharedLink` for `#/c/...` at start and on `hashchange`. The hash is
+  replaced by `#/` first (a reload never re-applies it). Decoding is strict and never throws: token
+  <= 4 KB, decompressed JSON <= 16 KB, whitelisted keys, storage zod schemas with generation-aware
+  EV / AV / Stat Point caps, then a check against the generation's data. Unknown parts are dropped and
+  listed as warnings. The load goes through `applyMatchupSnapshot` (switches generation, regulation,
+  format and matchup in one commit, persisted like any change). `AppState.shareNotice` holds the
+  Undo snapshot (in memory only) and is shown by `ShareNotice` for 8 s.
+- **Preview:** `index.html` carries Open Graph / Twitter tags. `__SITE_URL__` is replaced at build
+  time from `VITE_SITE_URL` (default `https://proggler23.github.io/ncp-mobile-calc/`). The image
+  `public/og-image.png` (1200x630, ~60 KB) comes from `scripts/generate-og-image.mjs` and is excluded
+  from the service worker precache (only crawlers fetch it).
+
 ## Generated data and provenance
 
 - `src/data/generated/<gen>/` (dex, learnsets, sets), `src/bridge/generated/` (name maps) and

@@ -35,6 +35,29 @@ export const NATURE_NAMES = [
   'Quirky',
 ] as const
 
+/** The 18 types plus Stellar (valid Tera types), English names. */
+export const TYPE_NAMES = [
+  'Normal',
+  'Fire',
+  'Water',
+  'Electric',
+  'Grass',
+  'Ice',
+  'Fighting',
+  'Poison',
+  'Ground',
+  'Flying',
+  'Psychic',
+  'Bug',
+  'Rock',
+  'Ghost',
+  'Dragon',
+  'Dark',
+  'Steel',
+  'Fairy',
+  'Stellar',
+] as const
+
 export type Gender = 'M' | 'F'
 export type Format = 'singles' | 'doubles'
 

@@ -153,7 +153,7 @@ const moveOverride = z
   .nullable()
 
 /** A build including its battle state (status, boosts, HP, ...), as held by the matchup screen. */
-const matchupSet = z.object({
+export const matchupSetSchema = z.object({
   speciesId: dexId,
   moveIds: z.array(dexId).max(LIMITS.maxMoves),
   level: bodyShape.level.optional(),
@@ -201,8 +201,8 @@ const matchupSet = z.object({
 const flags = z.record(z.string().max(32), z.union([z.boolean(), z.number().int().min(0).max(9)]))
 
 export const matchupSchema = z.object({
-  mine: matchupSet.optional(),
-  opp: matchupSet.optional(),
+  mine: matchupSetSchema.optional(),
+  opp: matchupSetSchema.optional(),
   field: z
     .object({
       weather: z.string().max(24).optional(),
@@ -226,6 +226,8 @@ export const matchupSchema = z.object({
   savedAt: ts,
 })
 
+export type MatchupSet = z.infer<typeof matchupSetSchema>
+
 export const backupSchemaVersion = 1
 export const BACKUP_APP_ID = 'ncp-mobile-calc'
 
@@ -242,6 +244,12 @@ export const parseTeam: (v: unknown) => Team | undefined = guard(teamSchema)
 export const parseCustomSet: (v: unknown) => CustomSet | undefined = guard(customSetSchema)
 export const parseSettings: (v: unknown) => Settings | undefined = guard(settingsSchema)
 const guardMatchup = guard(matchupSchema)
+const guardMatchupSet = guard(matchupSetSchema)
+/** One build with battle state (shared calcs); `gen` selects the EV / AV caps. */
+export function parseMatchupSet(v: unknown, gen: string): MatchupSet | undefined {
+  const s = guardMatchupSet(v)
+  return s && !investmentError(gen, s.evs) ? s : undefined
+}
 /** `gen` (the generation the matchup belongs to) selects the EV / AV caps. */
 export function parseMatchup(v: unknown, gen?: string): StoredMatchup | undefined {
   const m = guardMatchup(v)

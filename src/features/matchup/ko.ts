@@ -1,3 +1,5 @@
+import type { MoveResult } from '../../engine/types'
+
 export type KoLevel = 'ko1' | 'ko1p' | 'ko2' | 'ko3' | 'none'
 
 /** NCP may emit HTML (status/joke texts); we only ever show it as plain text. */
@@ -30,4 +32,9 @@ export function koLevel(text: string): KoLevel {
 export function percentText(damageText: string, range: [number, number]): string {
   const m = /\(([^)]*%)\)/.exec(damageText)
   return m?.[1] ?? `${range[0]} - ${range[1]}%`
+}
+
+/** The one-line result NCP shows for a move: `<description>: <damage> -- <KO chance>`. */
+export function moveLine(r: MoveResult): string {
+  return `${plainText(r.description)}: ${plainText(r.damageText)} -- ${plainText(r.koChance)}`
 }

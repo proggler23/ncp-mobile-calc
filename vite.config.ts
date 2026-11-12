@@ -12,9 +12,16 @@ const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 
   version: string
 }
 
+/** Public URL of the deployed app, used for the absolute Open Graph URLs (index.html). */
+const DEFAULT_SITE_URL = 'https://proggler23.github.io/ncp-mobile-calc/'
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   const base = normalizeBase(env.VITE_BASE || process.env.VITE_BASE)
+  const siteUrl = (env.VITE_SITE_URL || process.env.VITE_SITE_URL || DEFAULT_SITE_URL).replace(
+    /\/*$/,
+    '/',
+  )
   return {
     base,
     define: { __APP_VERSION__: JSON.stringify(pkg.version) },
@@ -39,6 +46,10 @@ export default defineConfig(({ mode }) => {
     },
     plugins: [
       react(),
+      {
+        name: 'site-url',
+        transformIndexHtml: (html: string) => html.replaceAll('__SITE_URL__', siteUrl),
+      },
       VitePWA({
         registerType: 'autoUpdate',
         includeAssets: ['favicon.svg', 'icons/*.png'],
@@ -69,6 +80,8 @@ export default defineConfig(({ mode }) => {
           // current format). Every other generation is fetched on first use and then served from
           // the runtime cache below.
           globIgnores: [
+            // Only link-preview crawlers fetch the Open Graph image; the app never needs it offline.
+            'og-image.png',
             `assets/gendata-!(${PRECACHED_GEN})-*`,
             `assets/genmap-!(${PRECACHED_GEN})-*`,
           ],

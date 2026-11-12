@@ -16,8 +16,11 @@ import { regulationChoices, regulationName } from './state/regulation'
 import { InstallBanner, useInstallBanner } from './features/install/InstallBanner'
 import { initInstall } from './state/install'
 import { initSupportNudge, markMenuSeen, useSupport } from './state/supportNudge'
-import { useRoute } from './state/route'
+import { openSharedLink } from './state/share'
+import { currentRoute, useRoute } from './state/route'
 import { Segmented } from './ui/controls'
+import { ToastHost } from './ui/Toast'
+import { ShareNotice } from './features/matchup/ShareNotice'
 
 // The matchup screen pulls in the bridge, the engine glue and all pickers; keep it out of the
 // first paint. The data tables and NCP scripts load on top of it (see state/lib.ts).
@@ -141,6 +144,11 @@ export default function App() {
     void loadMatchup() // start fetching the screen chunk while settings/data load
     return () => void flushMatchup()
   }, [])
+  // `#/c/<token>`: a shared calc (at start and when a link is opened in the running app).
+  useEffect(() => {
+    const now = currentRoute()
+    if (now.startsWith('c/')) void openSharedLink(now.slice(2))
+  }, [route])
   useEffect(() => {
     document.documentElement.lang = lang
   }, [lang])
@@ -165,6 +173,7 @@ export default function App() {
             </button>
           </div>
         )}
+        <ShareNotice />
         {storageNotice && (
           <div className="notice" role="status">
             <p>{t('err.storage')}</p>
@@ -190,6 +199,7 @@ export default function App() {
           </p>
         )}
       </main>
+      <ToastHost />
     </div>
   )
 }

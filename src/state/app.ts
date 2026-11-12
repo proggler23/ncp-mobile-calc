@@ -22,6 +22,7 @@ import {
   type SideFlag,
   type UiField,
 } from './field'
+import type { ShareWarning, DecodeFailure } from '../share/codec'
 import { getLib, prepareLib } from './lib'
 import { blankSet, changeSpecies, sanitizeSet } from './sets'
 import { createStore } from './store'
@@ -34,6 +35,25 @@ export interface CalcState {
   input: CalcInput
   warnings: string[]
 }
+
+/** Everything a shared-calc load replaces, so "Undo" can put it back exactly. */
+export interface MatchupSnapshot {
+  gen: DataGenId
+  format: Format
+  regulation: string
+  regulations: Partial<Record<DataGenId, string>>
+  mine?: SavedSetLike
+  opp?: SavedSetLike
+  mineTeamIndex?: number
+  oppPreset: PresetId | null
+  field: UiField
+  direction: Direction
+  lastChanged: Side
+}
+
+export type ShareNotice =
+  | { kind: 'loaded'; id: number; warnings: ShareWarning[]; undo: MatchupSnapshot }
+  | { kind: 'error'; reason: 'offline' | DecodeFailure }
 
 export interface AppState {
   status: 'booting' | 'loading' | 'ready' | 'error'
@@ -69,6 +89,10 @@ export interface AppState {
   lastChanged: Side
   /** Persisting the matchup failed (shown once, until dismissed). */
   storageNotice?: boolean
+  /** Result of opening a shared-calc link (shown until dismissed / timed out). */
+  shareNotice?: ShareNotice
+  /** Move row a shared link pointed at: `MoveResults` expands it (`nonce` remounts the rows). */
+  focusMove?: { direction: Direction; index: number; nonce: number }
 }
 
 const initialState = (): AppState => ({
@@ -634,4 +658,88 @@ export function setMatchup(mine: SavedSetLike | undefined, opp: SavedSetLike | u
   ++tokens.opp
   commit({ mine, opp, mineTeamIndex: undefined, oppPreset: null, lastChanged: 'opp' })
   void refreshCommon()
+}
+
+// ---------------------------------------------------------------------------------------------
+// Shared calcs (state/share.ts builds the snapshots)
+// ---------------------------------------------------------------------------------------------
+
+export function snapshotMatchup(s: AppState = store.get()): MatchupSnapshot {
+  return {
+    gen: s.gen,
+    format: s.format,
+    regulation: s.regulation,
+    regulations: s.regulations,
+    mine: s.mine,
+    opp: s.opp,
+    mineTeamIndex: s.mineTeamIndex,
+    oppPreset: s.oppPreset,
+    field: s.field,
+    direction: s.direction,
+    lastChanged: s.lastChanged,
+  }
+}
+
+export type ApplyOutcome = 'ok' | 'offline' | 'invalid'
+
+/**
+ * Switch to `gen` (awaiting its data) and replace the whole matchup. `make` runs once the
+ * generation is loaded (so it can validate against its data); `undefined` aborts and keeps the
+ * current state. Used for opening shared links and for their "Undo".
+ */
+export async function applyMatchupSnapshot(
+  gen: DataGenId,
+  make: () => MatchupSnapshot | undefined,
+): Promise<ApplyOutcome> {
+  await flushMatchup()
+  const token = ++tokens.gen
+  const before = store.get()
+  store.set({ status: 'loading', genNotice: undefined })
+  try {
+    await prepareLib(gen)
+  } catch {
+    store.set({ status: before.booted ? 'ready' : before.status })
+    return 'offline'
+  }
+  if (token !== tokens.gen) return 'invalid'
+  let snap: MatchupSnapshot | undefined
+  try {
+    snap = make()
+  } catch {
+    snap = undefined
+  }
+  if (!snap) {
+    store.set({ status: 'ready' })
+    return 'invalid'
+  }
+  ++tokens.mine
+  ++tokens.opp
+  ++tokens.common
+  commit({
+    status: 'ready',
+    error: undefined,
+    gen: snap.gen,
+    format: snap.format,
+    regulation: snap.regulation,
+    regulations: snap.regulations,
+    mine: snap.mine,
+    opp: snap.opp,
+    mineTeamIndex: snap.mineTeamIndex,
+    oppPreset: snap.oppPreset,
+    field: snap.field,
+    direction: snap.direction,
+    lastChanged: snap.lastChanged,
+    focusMove: undefined,
+  })
+  void persist({ gen: snap.gen, format: snap.format, regulations: snap.regulations })
+  void refreshCommon()
+  return 'ok'
+}
+
+export function setShareNotice(shareNotice: ShareNotice | undefined): void {
+  store.set({ shareNotice })
+}
+
+export function setFocusMove(focus: { direction: Direction; index: number } | undefined): void {
+  store.set({ focusMove: focus && { ...focus, nonce: (store.get().focusMove?.nonce ?? 0) + 1 } })
 }

@@ -384,3 +384,40 @@ summary:focus-visible {
   border: 2px solid var(--surface);
   box-shadow: 0 0 0 1px #b39800;
 }
+
+/* ---- shared-calc notice and toast ---- */
+.share-notice {
+  display: grid;
+  gap: 0.5rem;
+  overflow-wrap: anywhere;
+}
+
+.share-notice ul {
+  margin: 0.25rem 0 0;
+  padding-left: 1.25rem;
+}
+
+.share-notice__btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.toast-host {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: calc(5rem + var(--safe-b));
+  z-index: 60;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.toast--float {
+  margin: 0;
+  max-width: calc(100% - 2rem);
+  background: var(--text);
+  color: var(--bg);
+  box-shadow: 0 2px 12px rgb(0 0 0 / 0.3);
+}
