@@ -1,8 +1,19 @@
 name: Deploy to GitHub Pages
+# Builds ONLY from committed files (no data download, no build:data / build:bridge): `build:offline`
+# runs the build with outbound network access blocked, so a step that reaches for the network fails.
 on:
   push:
     branches: [main]
   workflow_dispatch:
+  # Reusable: the scheduled auto-update workflow calls this after committing with GITHUB_TOKEN
+  # (pushes made with GITHUB_TOKEN do not trigger the `push` event above).
+  workflow_call:
+    inputs:
+      ref:
+        description: Git ref/SHA to deploy (defaults to the triggering ref)
+        type: string
+        required: false
+        default: ''
 permissions:
   contents: read
   pages: write
@@ -15,12 +26,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm run build
+      - name: Committed generated files are complete and up to date (offline)
+        run: npm run check:generated
+      - name: Build (network blocked)
+        run: npm run build:offline
         env:
           VITE_BASE: /${{ github.event.repository.name }}/
       - uses: actions/configure-pages@v5

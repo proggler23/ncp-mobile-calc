@@ -1,0 +1,7 @@
+{
+  "$comment": "Hand-maintained German names. kind -> Showdown id of the English name (lowercase alphanumerics, e.g. 'stick', 'hiddenpowerfire') -> German display name. Wins over names/de.json (the PokeAPI snapshot, rewritten by build:data --update-names). Never edit de.json by hand.",
+  "species": {},
+  "moves": {},
+  "abilities": {},
+  "items": {}
+}

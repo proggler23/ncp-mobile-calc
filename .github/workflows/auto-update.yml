@@ -1,0 +1,146 @@
+# Weekly automatic update: refresh game data (active formats only) + sync the vendored NCP engine
+# from upstream, then run the validation gates (scripts/check-data) and decide:
+#   pass     -> commit to main as a bot and deploy (this run calls deploy.yml)
+#   anomaly  -> open a PR with the gate summary as its body; nothing is pushed to main
+#   fail     -> the job fails (GitHub notifies); nothing is committed
+# Details, thresholds and rollback: docs/MAINTENANCE.md
+name: Auto update (data + NCP)
+on:
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+    inputs:
+      all_gens:
+        description: Rebuild ALL generations (also frozen ones; normally not wanted)
+        type: boolean
+        default: false
+      skip_ncp:
+        description: Skip the NCP upstream sync
+        type: boolean
+        default: false
+permissions:
+  contents: read
+concurrency:
+  group: auto-update
+  cancel-in-progress: false
+env:
+  # Paths this workflow may change (everything else in the checkout is ignored / never committed)
+  UPDATE_PATHS: src/data/generated src/bridge/generated src/engine/__golden__ vendor/ncp
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: write
+      pull-requests: write
+    outputs:
+      status: ${{ steps.gate.outputs.status }}
+      deploy: ${{ steps.commit.outputs.deploy }}
+      sha: ${{ steps.commit.outputs.sha }}
+    env:
+      # A fine-grained PAT / GitHub App token that may push to the protected default branch.
+      # Without it GITHUB_TOKEN is used (works only if branch protection does not block it).
+      HAS_PAT: ${{ secrets.AUTO_UPDATE_TOKEN != '' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          token: ${{ secrets.AUTO_UPDATE_TOKEN || github.token }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+
+      - name: NCP upstream moved?
+        id: detect
+        if: ${{ !inputs.skip_ncp }}
+        run: npm run ncp:sync -- --detect
+      - name: Install Chromium (only needed to re-capture NCP goldens)
+        if: ${{ steps.detect.outputs.changed == 'true' }}
+        run: npx playwright install --with-deps chromium
+
+      - name: Refresh game data (active formats)
+        run: npm run build:data -- --refresh ${{ inputs.all_gens && '--all' || '' }}
+      - name: Sync NCP upstream (re-vendor, bridge, goldens)
+        if: ${{ !inputs.skip_ncp }}
+        run: npm run ncp:sync
+      - name: Rebuild bridge maps
+        run: npm run build:bridge
+
+      - name: Validation gates (schema, count deltas, bridge coverage, lint, typecheck, tests, build)
+        id: gate
+        run: |
+          ARGS=""
+          if [ -f .cache/ncp-sync/result.json ]; then ARGS="--merge .cache/ncp-sync/result.json"; fi
+          npm run check:data -- --full $ARGS
+      - name: Gate summary
+        if: ${{ always() }}
+        run: |
+          if [ -f .cache/check-data/result.md ]; then
+            cat .cache/check-data/result.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Gate did not produce a result (earlier step failed)." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Did anything change?
+        id: diff
+        run: |
+          # shellcheck disable=SC2086
+          if [ -n "$(git status --porcelain -- $UPDATE_PATHS)" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # ---- pass: commit to the default branch, then deploy (called below) ----
+      - name: Commit to main
+        id: commit
+        if: ${{ steps.gate.outputs.status == 'pass' && steps.diff.outputs.changed == 'true' }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # shellcheck disable=SC2086
+          git add -A -- $UPDATE_PATHS
+          git commit -m "chore(data): weekly refresh of game data and NCP sync" \
+            -m "Gate result: pass. See the workflow run summary: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          git push origin "HEAD:${{ github.event.repository.default_branch }}"
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          # A push made with GITHUB_TOKEN does not trigger deploy.yml, so this run calls it.
+          # With a PAT / App token the push itself triggers deploy.yml (no double deploy).
+          if [ "$HAS_PAT" = "true" ]; then echo "deploy=false" >> "$GITHUB_OUTPUT"; else echo "deploy=true" >> "$GITHUB_OUTPUT"; fi
+
+      # ---- anomaly: open a PR for human review ----
+      - name: Open a PR for review
+        if: ${{ steps.gate.outputs.status == 'anomaly' && steps.diff.outputs.changed == 'true' }}
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.AUTO_UPDATE_TOKEN || github.token }}
+          branch: auto-update/data
+          delete-branch: true
+          base: ${{ github.event.repository.default_branch }}
+          add-paths: |
+            src/data/generated
+            src/bridge/generated
+            src/engine/__golden__
+            vendor/ncp
+          commit-message: 'chore(data): weekly refresh (needs review: gate anomaly)'
+          title: 'chore(data): weekly refresh needs review (gate anomaly)'
+          body-path: .cache/check-data/result.md
+          labels: data
+      - name: Anomaly without any file change
+        if: ${{ steps.gate.outputs.status == 'anomaly' && steps.diff.outputs.changed != 'true' }}
+        run: |
+          echo "::error::Gate reported an anomaly but there is nothing to put in a PR (see the summary)."
+          exit 1
+
+  deploy:
+    needs: update
+    if: ${{ needs.update.outputs.deploy == 'true' }}
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    uses: ./.github/workflows/deploy.yml
+    with:
+      ref: ${{ needs.update.outputs.sha }}

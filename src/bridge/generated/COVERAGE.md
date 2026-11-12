@@ -6,56 +6,56 @@ entities (National Dex entries missing from the generation's own Showdown data) 
 names from another generation. "Showdown-only" entities are unknown to the NCP engine and
 cannot be calculated.
 
-| gen       | kind      | NCP total | own-gen match | other-gen match | NCP-only (default dex) | NCP-only (National Dex only) | Showdown total | Showdown matched | Showdown-only |
-| --------- | --------- | --------- | ------------- | --------------- | ---------------------- | ---------------------------- | -------------- | ---------------- | ------------- |
-| rby       | species   | 151       | 151           | 0               | 0                      | 0                            | 151            | 151              | 0             |
-| rby       | moves     | 161       | 161           | 0               | 0                      | 0                            | 165            | 161              | 4             |
-| rby       | items     | 0         | 0             | 0               | 0                      | 0                            | 9              | 0                | 9             |
-| rby       | abilities | 0         | 0             | 0               | 0                      | 0                            | 0              | 0                | 0             |
-| gsc       | species   | 251       | 251           | 0               | 0                      | 0                            | 251            | 251              | 0             |
-| gsc       | moves     | 263       | 263           | 0               | 0                      | 0                            | 267            | 263              | 4             |
-| gsc       | items     | 41        | 41            | 0               | 0                      | 0                            | 62             | 41               | 21            |
-| gsc       | abilities | 0         | 0             | 0               | 0                      | 0                            | 0              | 0                | 0             |
-| adv       | species   | 389       | 389           | 0               | 0                      | 0                            | 392            | 392              | 0             |
-| adv       | moves     | 365       | 365           | 0               | 0                      | 0                            | 370            | 365              | 5             |
-| adv       | items     | 82        | 80            | 2               | 0                      | 0                            | 106            | 80               | 26            |
-| adv       | abilities | 76        | 76            | 0               | 0                      | 0                            | 76             | 76               | 0             |
-| dpp       | species   | 505       | 505           | 0               | 0                      | 0                            | 526            | 526              | 0             |
-| dpp       | moves     | 478       | 478           | 0               | 0                      | 0                            | 483            | 478              | 5             |
-| dpp       | items     | 164       | 162           | 0               | 2                      | 0                            | 210            | 162              | 48            |
-| dpp       | abilities | 123       | 123           | 0               | 0                      | 0                            | 123            | 123              | 0             |
-| bw        | species   | 668       | 668           | 0               | 0                      | 0                            | 694            | 694              | 0             |
-| bw        | moves     | 570       | 570           | 0               | 0                      | 0                            | 575            | 570              | 5             |
-| bw        | items     | 196       | 194           | 0               | 2                      | 0                            | 239            | 194              | 45            |
-| bw        | abilities | 164       | 164           | 0               | 0                      | 0                            | 164            | 164              | 0             |
-| xy        | species   | 800       | 799           | 0               | 1                      | 0                            | 834            | 834              | 0             |
-| xy        | moves     | 628       | 627           | 1               | 0                      | 0                            | 634            | 627              | 7             |
-| xy        | items     | 238       | 236           | 0               | 2                      | 0                            | 284            | 236              | 48            |
-| xy        | abilities | 191       | 191           | 0               | 0                      | 0                            | 191            | 191              | 0             |
-| sm        | species   | 919       | 915           | 0               | 4                      | 0                            | 984            | 984              | 0             |
-| sm        | moves     | 719       | 718           | 1               | 0                      | 0                            | 725            | 718              | 7             |
-| sm        | items     | 297       | 282           | 13              | 2                      | 0                            | 339            | 282              | 57            |
-| sm        | abilities | 233       | 233           | 0               | 0                      | 0                            | 233            | 233              | 0             |
-| lgpe      | species   | 184       | 184           | 0               | 0                      | 0                            | 188            | 185              | 3             |
-| lgpe      | moves     | 225       | 222           | 1               | 2                      | 0                            | 224            | 222              | 2             |
-| lgpe      | items     | 0         | 0             | 0               | 0                      | 0                            | 339            | 0                | 339           |
-| lgpe      | abilities | 0         | 0             | 0               | 0                      | 0                            | 1              | 0                | 1             |
-| swsh      | species   | 1038      | 730           | 304             | 4                      | 0                            | 805            | 805              | 0             |
-| swsh      | moves     | 835       | 659           | 143             | 33                     | 0                            | 665            | 659              | 6             |
-| swsh      | items     | 306       | 187           | 117             | 2                      | 0                            | 354            | 187              | 167           |
-| swsh      | abilities | 266       | 266           | 0               | 0                      | 0                            | 267            | 267              | 0             |
-| sv        | species   | 1201      | 825           | 372             | 2                      | 2                            | 876            | 876              | 0             |
-| sv        | moves     | 928       | 681           | 208             | 0                      | 39                           | 685            | 681              | 4             |
-| sv        | items     | 320       | 182           | 136             | 2                      | 0                            | 249            | 182              | 67            |
-| sv        | abilities | 306       | 306           | 0               | 0                      | 0                            | 310            | 310              | 0             |
-| za        | species   | 495       | 492           | 0               | 3                      | 0                            | 513            | 512              | 1             |
-| za        | moves     | 340       | 312           | 27              | 1                      | 0                            | 312            | 312              | 0             |
-| za        | items     | 170       | 70            | 89              | 11                     | 0                            | 249            | 70               | 179           |
-| za        | abilities | 0         | 0             | 0               | 0                      | 0                            | 203            | 0                | 203           |
-| champions | species   | 1247      | 317           | 924             | 2                      | 4                            | 333            | 329              | 4             |
-| champions | moves     | 929       | 495           | 394             | 0                      | 40                           | 496            | 495              | 1             |
-| champions | items     | 365       | 148           | 204             | 5                      | 8                            | 148            | 148              | 0             |
-| champions | abilities | 313       | 207           | 105             | 1                      | 0                            | 210            | 210              | 0             |
+| gen | kind | NCP total | own-gen match | other-gen match | NCP-only (default dex) | NCP-only (National Dex only) | Showdown total | Showdown matched | Showdown-only |
+|---|---|---|---|---|---|---|---|---|---|
+| rby | species | 151 | 151 | 0 | 0 | 0 | 151 | 151 | 0 |
+| rby | moves | 161 | 161 | 0 | 0 | 0 | 165 | 161 | 4 |
+| rby | items | 0 | 0 | 0 | 0 | 0 | 9 | 0 | 9 |
+| rby | abilities | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| gsc | species | 251 | 251 | 0 | 0 | 0 | 251 | 251 | 0 |
+| gsc | moves | 263 | 263 | 0 | 0 | 0 | 267 | 263 | 4 |
+| gsc | items | 41 | 41 | 0 | 0 | 0 | 62 | 41 | 21 |
+| gsc | abilities | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| adv | species | 389 | 389 | 0 | 0 | 0 | 392 | 392 | 0 |
+| adv | moves | 365 | 365 | 0 | 0 | 0 | 370 | 365 | 5 |
+| adv | items | 82 | 80 | 2 | 0 | 0 | 106 | 80 | 26 |
+| adv | abilities | 76 | 76 | 0 | 0 | 0 | 76 | 76 | 0 |
+| dpp | species | 505 | 505 | 0 | 0 | 0 | 526 | 526 | 0 |
+| dpp | moves | 478 | 478 | 0 | 0 | 0 | 483 | 478 | 5 |
+| dpp | items | 164 | 162 | 0 | 2 | 0 | 210 | 162 | 48 |
+| dpp | abilities | 123 | 123 | 0 | 0 | 0 | 123 | 123 | 0 |
+| bw | species | 668 | 668 | 0 | 0 | 0 | 694 | 694 | 0 |
+| bw | moves | 570 | 570 | 0 | 0 | 0 | 575 | 570 | 5 |
+| bw | items | 196 | 194 | 0 | 2 | 0 | 239 | 194 | 45 |
+| bw | abilities | 164 | 164 | 0 | 0 | 0 | 164 | 164 | 0 |
+| xy | species | 800 | 799 | 0 | 1 | 0 | 834 | 834 | 0 |
+| xy | moves | 628 | 627 | 1 | 0 | 0 | 634 | 627 | 7 |
+| xy | items | 238 | 236 | 0 | 2 | 0 | 284 | 236 | 48 |
+| xy | abilities | 191 | 191 | 0 | 0 | 0 | 191 | 191 | 0 |
+| sm | species | 919 | 915 | 0 | 4 | 0 | 984 | 984 | 0 |
+| sm | moves | 719 | 718 | 1 | 0 | 0 | 725 | 718 | 7 |
+| sm | items | 297 | 282 | 13 | 2 | 0 | 339 | 282 | 57 |
+| sm | abilities | 233 | 233 | 0 | 0 | 0 | 233 | 233 | 0 |
+| lgpe | species | 184 | 184 | 0 | 0 | 0 | 188 | 185 | 3 |
+| lgpe | moves | 225 | 222 | 1 | 2 | 0 | 224 | 222 | 2 |
+| lgpe | items | 0 | 0 | 0 | 0 | 0 | 339 | 0 | 339 |
+| lgpe | abilities | 0 | 0 | 0 | 0 | 0 | 1 | 0 | 1 |
+| swsh | species | 1038 | 730 | 304 | 4 | 0 | 805 | 805 | 0 |
+| swsh | moves | 835 | 659 | 143 | 33 | 0 | 665 | 659 | 6 |
+| swsh | items | 306 | 187 | 117 | 2 | 0 | 354 | 187 | 167 |
+| swsh | abilities | 266 | 266 | 0 | 0 | 0 | 267 | 267 | 0 |
+| sv | species | 1201 | 825 | 372 | 2 | 2 | 876 | 876 | 0 |
+| sv | moves | 928 | 681 | 208 | 0 | 39 | 685 | 681 | 4 |
+| sv | items | 320 | 182 | 136 | 2 | 0 | 249 | 182 | 67 |
+| sv | abilities | 306 | 306 | 0 | 0 | 0 | 310 | 310 | 0 |
+| za | species | 495 | 492 | 0 | 3 | 0 | 513 | 512 | 1 |
+| za | moves | 340 | 312 | 27 | 1 | 0 | 312 | 312 | 0 |
+| za | items | 170 | 70 | 89 | 11 | 0 | 249 | 70 | 179 |
+| za | abilities | 0 | 0 | 0 | 0 | 0 | 203 | 0 | 203 |
+| champions | species | 1247 | 317 | 924 | 2 | 4 | 333 | 329 | 4 |
+| champions | moves | 929 | 495 | 394 | 0 | 40 | 496 | 495 | 1 |
+| champions | items | 365 | 148 | 204 | 5 | 8 | 148 | 148 | 0 |
+| champions | abilities | 313 | 207 | 105 | 1 | 0 | 210 | 210 | 0 |
 
 ## rby (engine gen 1)
 
