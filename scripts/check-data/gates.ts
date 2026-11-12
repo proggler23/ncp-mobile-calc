@@ -4,7 +4,7 @@
  *   anomaly  - plausible but needs a human (workflow opens a PR instead of committing)
  *   fail     - broken (workflow fails, nothing is committed)
  */
-import type { Counts } from './schema'
+import type { Counts, RegulationCounts } from './schema'
 
 export type Status = 'pass' | 'anomaly' | 'fail'
 export interface Reason {
@@ -67,6 +67,43 @@ export function compareCounts(
         level: drop >= t.countDropFail ? 'fail' : 'anomaly',
         code: 'count-drop',
         message: `${gen}: ${key} dropped ${pct}% (${p[key]} -> ${c[key]}; threshold ${t.countDropAnomaly * 100}%)`,
+      })
+    }
+  }
+  return { reasons, deltas }
+}
+
+/**
+ * Compare the legal-pool sizes of each regulation with the previous snapshot (same thresholds as
+ * the dex counts). A regulation that disappeared fails, a new one is fine.
+ * Keys are `<gen>/<regulation id>`.
+ */
+export function compareRegulationCounts(
+  prev: Record<string, RegulationCounts>,
+  cur: Record<string, RegulationCounts>,
+  t = THRESHOLDS,
+): { reasons: Reason[]; deltas: Record<string, Partial<RegulationCounts>> } {
+  const reasons: Reason[] = []
+  const deltas: Record<string, Partial<RegulationCounts>> = {}
+  for (const [key, p] of Object.entries(prev)) {
+    const c = cur[key]
+    if (!c) {
+      reasons.push({
+        level: 'fail',
+        code: 'regulation-missing',
+        message: `${key}: regulation disappeared`,
+      })
+      continue
+    }
+    for (const k of ['species', 'items'] as const) {
+      if (c[k] !== p[k]) (deltas[key] ??= {})[k] = c[k] - p[k]
+      if (p[k] <= 0) continue
+      const drop = (p[k] - c[k]) / p[k]
+      if (drop <= t.countDropAnomaly) continue
+      reasons.push({
+        level: drop >= t.countDropFail ? 'fail' : 'anomaly',
+        code: 'regulation-count-drop',
+        message: `${key}: legal ${k} dropped ${(drop * 100).toFixed(1)}% (${p[k]} -> ${c[k]}; threshold ${t.countDropAnomaly * 100}%)`,
       })
     }
   }

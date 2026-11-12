@@ -25,7 +25,8 @@ export default defineConfig(({ mode }) => {
           // them out of the precache (see `workbox` below): gendata-<gen>-<file>, genmap-<gen>.
           chunkFileNames: (chunk) => {
             const id = (chunk.facadeModuleId ?? '').replaceAll('\\', '/')
-            const data = /\/src\/data\/generated\/([^/]+)\/(dex|learnsets|sets)\.json/.exec(id)
+            const data =
+              /\/src\/data\/generated\/([^/]+)\/(dex|learnsets|sets|regulations)\.json/.exec(id)
             if (data) return `assets/gendata-${data[1]}-${data[2]}-[hash].js`
             const map = /\/src\/bridge\/generated\/([^/]+)\.json/.exec(id)
             if (map) return `assets/genmap-${map[1]}-[hash].js`

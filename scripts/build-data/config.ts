@@ -20,9 +20,24 @@ export interface VgcFormat {
   months: string[]
 }
 
+/**
+ * A regulation (legal pool) of a generation. Derived from the Showdown `format` (Dex.formats rule
+ * table + TeamValidator), or hand-maintained in regulations/manual.json when `format` is absent
+ * or its lists are overridden there. The first entry is shown first; exactly one is the default.
+ */
+export interface RegConfig {
+  id: string
+  label: { en: string; de: string }
+  /** Showdown format name; absent for regulations that only exist in manual.json */
+  format?: string
+  default?: boolean
+}
+
 export interface GenConfig {
   id: GenId
   label: string
+  /** Regulations of this generation (the synthetic "No filter" is added by the app). */
+  regulations?: RegConfig[]
   source: GenSource | PsModSource
   /** In priority order. First format that has a species supplies that species' sets. */
   vgc: VgcFormat[]
@@ -154,6 +169,18 @@ export const GENS: GenConfig[] = [
     id: 'sv',
     label: 'Gen 9 (Scarlet/Violet)',
     source: { kind: 'gen', gen: 9 },
+    // The VGC regulations pokemon-showdown 0.11.11 defines (Reg F and H are not among them).
+    regulations: [
+      {
+        id: 'regi',
+        label: { en: 'Reg I', de: 'Reg. I' },
+        format: '[Gen 9] VGC 2025 Reg I',
+        default: true,
+      },
+      { id: 'regg', label: { en: 'Reg G', de: 'Reg. G' }, format: '[Gen 9] VGC 2024 Reg G' },
+      { id: 'regd', label: { en: 'Reg D', de: 'Reg. D' }, format: '[Gen 9] VGC 2023 Reg D' },
+      { id: 'regc', label: { en: 'Reg C', de: 'Reg. C' }, format: '[Gen 9] VGC 2023 Reg C' },
+    ],
     vgc: [
       { id: 'gen9vgc2026regi', months: ['2026-05', '2026-04', '2026-03'] },
       { id: 'gen9vgc2026regf', months: ['2026-03', '2026-02', '2026-01'] },
@@ -162,7 +189,7 @@ export const GENS: GenConfig[] = [
       { id: 'gen9vgc2024regg', months: ['2024-06', '2024-07', '2024-05'] },
     ],
     gaps: [
-      'Data is the base Showdown gen9 ruleset (latest DLC); individual VGC regulations restrict the legal pool further.',
+      'Data is the base Showdown gen9 ruleset (latest DLC); the legal pool of each VGC regulation is in regulations.json (learnsets are not restricted per regulation; pre-DLC regulations may offer moves the species only learns through DLC).',
     ],
   },
   {
@@ -180,6 +207,25 @@ export const GENS: GenConfig[] = [
     id: 'champions',
     label: 'Pokemon Champions',
     source: { kind: 'ps', mod: 'champions', learnGen: '9' },
+    regulations: [
+      // Reg M-C is not in pokemon-showdown 0.11.11: hand-maintained (regulations/manual.json)
+      {
+        id: 'regmc',
+        label: { en: 'Reg M-C', de: 'Reg. M-C' },
+        format: '[Gen 9 Champions] VGC 2026 Reg M-C',
+        default: true,
+      },
+      {
+        id: 'regmb',
+        label: { en: 'Reg M-B', de: 'Reg. M-B' },
+        format: '[Gen 9 Champions] VGC 2026 Reg M-B',
+      },
+      {
+        id: 'regma',
+        label: { en: 'Reg M-A', de: 'Reg. M-A' },
+        format: '[Gen 9 Champions] VGC 2026 Reg M-A',
+      },
+    ],
     vgc: [
       { id: 'gen9championsvgc2026regmc', months: ['2026-10', '2026-09'] },
       { id: 'gen9championsvgc2026regmb', months: ['2026-08', '2026-07', '2026-06'] },
@@ -189,7 +235,7 @@ export const GENS: GenConfig[] = [
     gaps: [
       "Source is the pokemon-showdown 'champions' mod (legal dex = isNonstandard null, Megas included, 20 PP cap, Mega Stones in items).",
       'Champions uses Stat Points instead of EVs: each point adds +1 to the stat (HP +1 too), 66 points total, max 32 per stat, IVs fixed at 31. In this data the "evs" fields of sets hold Stat Points. Verify limits against the Showdown validator when it lands (stat formula is stat + SP + 20; HP +75).',
-      "Regulation-specific legal pools (Reg M-A/M-B/M-C) are not separated; the base 'champions' mod is used.",
+      "The dex is the union of the Reg M-B pool (the npm 'champions' mod) and the extra entries Reg M-C adds (regulations/manual.json); the legal pool of each regulation is in regulations.json.",
     ],
   },
 ]

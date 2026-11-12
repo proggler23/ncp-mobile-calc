@@ -1,4 +1,4 @@
-import type { DexFile, GenData, GenId, Learnsets, SetsFile } from './types'
+import type { DexFile, GenData, GenId, Learnsets, RegulationsFile, SetsFile } from './types'
 import { GEN_IDS } from './types'
 import { own } from '../own'
 
@@ -11,6 +11,9 @@ type Loader<T> = () => Promise<{ default: T }>
 const dexLoaders = import.meta.glob<{ default: DexFile }>('./generated/*/dex.json')
 const learnsetLoaders = import.meta.glob<{ default: Learnsets }>('./generated/*/learnsets.json')
 const setLoaders = import.meta.glob<{ default: SetsFile }>('./generated/*/sets.json')
+const regulationLoaders = import.meta.glob<{ default: RegulationsFile }>(
+  './generated/*/regulations.json',
+)
 
 function pick<T>(loaders: Record<string, Loader<T>>, gen: GenId, file: string): Loader<T> {
   const loader = loaders[`./generated/${gen}/${file}`]
@@ -30,13 +33,16 @@ export function loadGenData(gen: GenId): Promise<GenData> {
   let p = cache.get(gen)
   if (!p) {
     p = (async () => {
-      const [dex, learnsets] = await Promise.all([
+      const regLoader = regulationLoaders[`./generated/${gen}/regulations.json`]
+      const [dex, learnsets, regs] = await Promise.all([
         pick(dexLoaders, gen, 'dex.json')(),
         pick(learnsetLoaders, gen, 'learnsets.json')(),
+        regLoader?.(),
       ])
       return {
         ...dex.default,
         learnsets: learnsets.default,
+        regulations: regs?.default.regulations ?? [],
         loadSets: () => loadSets(gen),
       }
     })()
@@ -55,6 +61,7 @@ export async function prefetchGenData(gen: GenId): Promise<void> {
     pick(dexLoaders, gen, 'dex.json')(),
     pick(learnsetLoaders, gen, 'learnsets.json')(),
     pick(setLoaders, gen, 'sets.json')(),
+    regulationLoaders[`./generated/${gen}/regulations.json`]?.(),
   ])
 }
 

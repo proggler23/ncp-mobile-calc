@@ -9,12 +9,14 @@
  *
  * Frozen gens' files are committed snapshots and are never written unless selected explicitly.
  */
-import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { gzipSync } from 'node:zlib'
 import path from 'node:path'
 import { ACTIVE_FORMATS, GENS, selectGens } from './config'
 import type { GenConfig } from './config'
 import { loadRawGen } from './dex-sources'
+import { buildRegulations, loadManual, manualExtras } from './regulations'
+import type { ManualFile } from './regulations'
 import { loadDeTables, lookupDe, speciesDe } from './names'
 import type { DeResult, DeTables } from './names'
 import { buildSets, chooseChaos } from './sets'
@@ -77,8 +79,8 @@ function formatsOf(sets: SetsFile) {
   return [...seen.values()].sort((a, b) => (a.month + a.format < b.month + b.format ? -1 : 1))
 }
 
-async function buildGen(cfg: GenConfig, de: DeTables, curated: CuratedFile) {
-  const raw = await loadRawGen(cfg)
+async function buildGen(cfg: GenConfig, de: DeTables, curated: CuratedFile, manual: ManualFile) {
+  const raw = await loadRawGen(cfg, manualExtras(manual, cfg.id))
   const tallies = {
     species: newTally(),
     moves: newTally(),
@@ -189,7 +191,10 @@ async function buildGen(cfg: GenConfig, de: DeTables, curated: CuratedFile) {
   if (errors.length) throw new Error(errors.join('\n'))
   const sets = mergeCurated(generated, curatedEntries)
 
+  const regs = buildRegulations(cfg.id, cfg.regulations, raw, manual)
   await mkdir(dir, { recursive: true })
+  if (regs) await writeFile(path.join(dir, 'regulations.json'), json(regs.file))
+  else await rm(path.join(dir, 'regulations.json'), { force: true })
   const files = {
     'dex.json': json(dex),
     'learnsets.json': json(raw.learnsets),
@@ -210,6 +215,7 @@ async function buildGen(cfg: GenConfig, de: DeTables, curated: CuratedFile) {
   }
   return {
     cfg,
+    regulations: regs,
     counts,
     tallies,
     missing,
@@ -232,10 +238,11 @@ async function main() {
   const de = await loadDeTables()
   const curated =
     (await readJsonIfExists<CuratedFile>(CURATED_FILE)) ?? ({ gens: {} } as CuratedFile)
+  const manual = await loadManual()
   const results = []
   for (const cfg of selected) {
     console.log(`Building ${cfg.id} ...`)
-    results.push(await buildGen(cfg, de, curated))
+    results.push(await buildGen(cfg, de, curated, manual))
   }
 
   // sources.json keeps the entries of frozen gens (they are not rebuilt)
@@ -290,6 +297,15 @@ async function main() {
   await writeFile(sourcesFile, JSON.stringify(sources, null, 2) + '\n')
   console.log((await writeVersionJson()) ? 'version.json updated' : 'version.json unchanged')
 
+  for (const r of results) {
+    for (const reg of r.regulations?.file.regulations ?? []) {
+      console.log(
+        `  [${r.cfg.id}] ${reg.id.padEnd(6)} ${reg.source.padEnd(8)} species ${reg.species.length} items ${reg.items.length} moves ${reg.moves?.length ?? 'all'}${reg.verified === false ? ' UNVERIFIED' : ''}`,
+      )
+    }
+    for (const n of r.regulations?.notes ?? []) console.warn(`  note: ${n}`)
+  }
+
   // Report
   console.log(
     '\nGen        species moves items abil learn sets | DE missing (sp/mv/it/ab) | gzip KB dex/learn/sets',
@@ -318,6 +334,7 @@ async function main() {
           sizes: r.sizes,
           missing: r.missing,
           usage: r.usage,
+          regulationNotes: r.regulations?.notes ?? [],
         },
       ]),
     ),

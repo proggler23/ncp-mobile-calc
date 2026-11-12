@@ -9,7 +9,8 @@ import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from 'node
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { GEN_IDS } from '../../src/data/types'
-import { validateGen, VersionSchema } from './schema'
+import { regulationCountsOf, validateGen, VersionSchema } from './schema'
+import { GENS } from '../build-data/config'
 
 const ROOT = path.resolve(import.meta.dirname, '../..')
 const G = path.join(ROOT, 'src/data/generated')
@@ -27,7 +28,15 @@ for (const gen of GEN_IDS) {
     continue
   }
   const [dex, learnsets, sets] = files.map(read)
-  errors.push(...validateGen(gen, { dex, learnsets, sets }).errors)
+  const regFile = path.join(G, gen, 'regulations.json')
+  const regulations = existsSync(regFile) ? read(regFile) : undefined
+  const wanted = GENS.find((g) => g.id === gen)?.regulations ?? []
+  const have = regulationCountsOf(regulations)
+  for (const w of wanted)
+    if (!(w.id in have)) errors.push(`${gen}: regulations.json lacks "${w.id}" (config.ts)`)
+  errors.push(
+    ...validateGen(gen, { dex, learnsets, sets, ...(regulations ? { regulations } : {}) }).errors,
+  )
 }
 if (!existsSync(path.join(G, 'version.json'))) errors.push('version.json missing')
 else {

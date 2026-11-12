@@ -6,7 +6,7 @@
 import { readFile, readdir, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import type { DataVersionInfo } from '../../src/data/version'
-import type { SetsFile } from '../../src/data/types'
+import type { RegulationsFile, SetsFile } from '../../src/data/types'
 import { parseUpstreamMd } from '../ncp-sync/upstream-md'
 import { SNAPSHOT_FILE } from './names'
 import type { NamesFile } from './names'
@@ -41,12 +41,38 @@ export async function collectVersion(builtAt: string): Promise<DataVersionInfo> 
     ) as SetsFile
     usageMonths[d.name] = usageMonthsOf(sets)
   }
+  const regulations: NonNullable<DataVersionInfo['regulations']> = {}
+  for (const d of (await readdir(GENERATED, { withFileTypes: true })).filter((e) =>
+    e.isDirectory(),
+  )) {
+    let file: RegulationsFile
+    try {
+      file = JSON.parse(
+        await readFile(path.join(GENERATED, d.name, 'regulations.json'), 'utf8'),
+      ) as RegulationsFile
+    } catch {
+      continue
+    }
+    regulations[d.name] = Object.fromEntries(
+      file.regulations.map((r) => [
+        r.id,
+        {
+          source: r.source,
+          ...(r.showdownFormat ? { showdownFormat: r.showdownFormat } : {}),
+          ...(r.verified !== undefined ? { verified: r.verified } : {}),
+        },
+      ]),
+    )
+  }
   return {
     ncpSha: up.sha,
     ncpSyncedAt: up.syncedAt,
     showdownVersion: await showdownVersion(),
     usageMonths: Object.fromEntries(
       Object.entries(usageMonths).sort(([a], [b]) => (a < b ? -1 : 1)),
+    ),
+    regulations: Object.fromEntries(
+      Object.entries(regulations).sort(([a], [b]) => (a < b ? -1 : 1)),
     ),
     namesSnapshotDate: names.meta?.date ?? '',
     builtAt,

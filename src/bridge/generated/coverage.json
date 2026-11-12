@@ -1197,7 +1197,6 @@
   "species": {
    "ncpOnly": [
     "Aegislash-Shield",
-    "Mega Garchomp Z",
     "Mega Tatsugiri"
    ],
    "sdOnly": [
@@ -1212,13 +1211,8 @@
   },
   "items": {
    "ncpOnly": [
-    "Absolite Z",
-    "Baxcalibrite",
     "Darkranite",
-    "Garchompite Z",
-    "Golisopite",
     "Heatranite",
-    "Lucarionite Z",
     "Magearnite",
     "Tatsugirinite",
     "Zeraorite",
@@ -1619,7 +1613,6 @@
   "species": {
    "ncpOnly": [
     "Aegislash-Shield",
-    "Mega Garchomp Z",
     "Mega Tatsugiri",
     "Minior-Down",
     "Minior-Up",
@@ -1681,13 +1674,8 @@
   },
   "items": {
    "ncpOnly": [
-    "Absolite Z",
-    "Baxcalibrite",
     "Darkranite",
-    "Garchompite Z",
-    "Golisopite",
     "Heatranite",
-    "Lucarionite Z",
     "Luck Incense",
     "Magearnite",
     "Pure Incense",

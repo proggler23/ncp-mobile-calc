@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   compareCounts,
   compareCoverage,
+  compareRegulationCounts,
   goldenReasons,
   makeResult,
   mergeResults,
@@ -101,5 +102,32 @@ describe('status aggregation', () => {
     expect(md).toContain('ANOMALY')
     expect(md).toContain('`x`')
     expect(JSON.parse(JSON.stringify(m)).status).toBe('anomaly')
+  })
+})
+
+describe('compareRegulationCounts', () => {
+  const prev = { 'champions/regmc': { species: 366, items: 166 } }
+  it('passes unchanged, grown and new regulations, and reports deltas', () => {
+    expect(compareRegulationCounts(prev, prev).reasons).toEqual([])
+    const grown = {
+      'champions/regmc': { species: 370, items: 166 },
+      'champions/regmd': { species: 1, items: 1 },
+    }
+    const r = compareRegulationCounts(prev, grown)
+    expect(r.reasons).toEqual([])
+    expect(r.deltas).toEqual({ 'champions/regmc': { species: 4 } })
+  })
+  it('flags a drop above 5% as anomaly and 50% as fail', () => {
+    const a = compareRegulationCounts(prev, { 'champions/regmc': { species: 340, items: 166 } })
+    expect(a.reasons[0]).toMatchObject({ level: 'anomaly', code: 'regulation-count-drop' })
+    expect(a.reasons[0]!.message).toContain('species dropped')
+    const f = compareRegulationCounts(prev, { 'champions/regmc': { species: 366, items: 80 } })
+    expect(f.reasons[0]).toMatchObject({ level: 'fail' })
+  })
+  it('fails when a regulation disappears', () => {
+    expect(compareRegulationCounts(prev, {}).reasons[0]).toMatchObject({
+      level: 'fail',
+      code: 'regulation-missing',
+    })
   })
 })
