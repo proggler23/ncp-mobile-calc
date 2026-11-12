@@ -76,7 +76,7 @@ describe.each(backends)('repository on %s', (kind, make) => {
   })
 
   it('manages active team and settings', async () => {
-    expect(await repo.getSettings()).toEqual({ lang: 'en', gen: 'sv', format: 'doubles' })
+    expect(await repo.getSettings()).toEqual({ lang: 'en', gen: 'champions', format: 'doubles' })
     const t = await repo.createTeam({ name: 'A', gen: 'sv' })
     await repo.setActiveTeam(t.uid)
     expect((await repo.getActiveTeam())?.uid).toBe(t.uid)

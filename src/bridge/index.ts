@@ -7,6 +7,7 @@ export * from './gens'
 export {
   loadBridge,
   prepareBridge,
+  prefetchGen,
   getBridge,
   ncpName,
   showdownId,

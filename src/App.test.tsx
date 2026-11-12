@@ -3,16 +3,14 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import golden from './engine/__golden__/gen-9.json'
 import App from './App'
 import { PokemonEditor } from './features/editor/PokemonEditor'
-import { initApp, resetStore, setGen, setMatchup, store } from './state/app'
+import { initApp, setGen, setMatchup, store } from './state/app'
+import { resetAll } from './test-utils'
 import { blankSet } from './state/sets'
 import type { SavedSetLike } from './bridge/types'
 import { useState } from 'react'
 
 beforeEach(async () => {
-  localStorage.clear()
-  const { getRepository } = await import('./storage')
-  await (await getRepository()).setSettings({ gen: 'sv', format: 'doubles', lang: 'en' })
-  resetStore()
+  await resetAll({ gen: 'sv' })
 })
 afterEach(cleanup)
 
@@ -117,7 +115,9 @@ describe('matchup screen', () => {
   it('switches language and shows the German names', async () => {
     await renderReady()
     act(() => setMatchup(makeMine(), makeOpp()))
-    fireEvent.click(screen.getByRole('button', { name: /Language/ }))
+    fireEvent.click(screen.getByRole('button', { name: 'Menu' }))
+    fireEvent.click(await screen.findByRole('radio', { name: 'Deutsch' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Schließen' }))
     expect(await screen.findByRole('heading', { name: 'Fuegro' })).toBeVisible()
     expect(screen.getByRole('button', { name: /Feld/ })).toBeInTheDocument()
   })

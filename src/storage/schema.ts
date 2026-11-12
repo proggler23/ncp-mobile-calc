@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { GEN_IDS } from '../data/types'
 import { LIMITS } from './types'
-import type { CustomSet, SavedSet, Settings, Team } from './types'
+import type { CustomSet, SavedSet, Settings, StoredMatchup, Team } from './types'
 
 const id = z.string().min(1).max(LIMITS.maxIdLength)
 const name = z.string().max(LIMITS.maxNameLength)
@@ -76,6 +76,93 @@ export const settingsSchema = z.object({
   format: z.enum(['singles', 'doubles']),
 })
 
+const small = z.number().int().min(-1000).max(100_000)
+const moveOverride = z
+  .object({
+    bp: small.optional(),
+    type: z.string().max(24).optional(),
+    category: z.enum(['Physical', 'Special', 'Status']).optional(),
+    crit: z.boolean().optional(),
+    hits: small.optional(),
+    double: z.boolean().optional(),
+    z: z.boolean().optional(),
+    plus: z.boolean().optional(),
+    stellar: z.boolean().optional(),
+    pledge: z.string().max(24).optional(),
+    timesAffected: small.optional(),
+    opponentMoveIndex: small.optional(),
+  })
+  .nullable()
+
+/** A build including its battle state (status, boosts, HP, ...), as held by the matchup screen. */
+const matchupSet = z.object({
+  speciesId: id,
+  moveIds: z.array(id).max(LIMITS.maxMoves),
+  level: bodyShape.level.optional(),
+  nature: bodyShape.nature.optional(),
+  abilityId: bodyShape.abilityId,
+  itemId: bodyShape.itemId,
+  evs: evs.optional(),
+  ivs: ivs.optional(),
+  statPoints: statPoints.optional(),
+  teraType: bodyShape.teraType,
+  nickname: bodyShape.nickname,
+  gender: bodyShape.gender,
+  notes: bodyShape.notes,
+  status: z
+    .enum([
+      'Healthy',
+      'Poisoned',
+      'Badly Poisoned',
+      'Burned',
+      'Paralyzed',
+      'Asleep',
+      'Drowsy',
+      'Frozen',
+    ])
+    .optional(),
+  boosts: z
+    .object(
+      Object.fromEntries(
+        ['atk', 'def', 'spa', 'spd', 'spe'].map((k) => [
+          k,
+          z.number().int().min(-6).max(6).optional(),
+        ]),
+      ),
+    )
+    .optional(),
+  percentHP: z.number().min(0).max(100).optional(),
+  curHP: z.number().int().min(0).max(100_000).optional(),
+  abilityOn: z.boolean().optional(),
+  terastallized: z.boolean().optional(),
+  dynamax: z.boolean().optional(),
+  gmax: z.boolean().optional(),
+  moveOverrides: z.array(moveOverride).max(LIMITS.maxMoves).optional(),
+})
+
+const flags = z.record(z.string().max(32), z.union([z.boolean(), z.number().int().min(0).max(9)]))
+
+export const matchupSchema = z.object({
+  mine: matchupSet.optional(),
+  opp: matchupSet.optional(),
+  field: z
+    .object({
+      weather: z.string().max(24).optional(),
+      terrain: z.string().max(24).optional(),
+      gravity: z.boolean().optional(),
+      neutralizingGas: z.boolean().optional(),
+      auras: flags.optional(),
+      ruin: flags.optional(),
+      mine: flags.optional(),
+      opp: flags.optional(),
+    })
+    .optional(),
+  oppPreset: z.string().max(16).nullable().optional(),
+  teamUid: id.optional(),
+  mineTeamIndex: z.number().int().min(0).max(LIMITS.maxMembers).optional(),
+  savedAt: ts,
+})
+
 export const backupSchemaVersion = 1
 export const BACKUP_APP_ID = 'ncp-mobile-calc'
 
@@ -91,3 +178,4 @@ export const parseSavedSet: (v: unknown) => SavedSet | undefined = guard(savedSe
 export const parseTeam: (v: unknown) => Team | undefined = guard(teamSchema)
 export const parseCustomSet: (v: unknown) => CustomSet | undefined = guard(customSetSchema)
 export const parseSettings: (v: unknown) => Settings | undefined = guard(settingsSchema)
+export const parseMatchup: (v: unknown) => StoredMatchup | undefined = guard(matchupSchema)

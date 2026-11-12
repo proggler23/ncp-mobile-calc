@@ -1,0 +1,107 @@
+.teams {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: grid;
+  align-content: start;
+  gap: 0.625rem;
+  padding: 0.5rem;
+}
+
+.teams > * {
+  min-width: 0;
+}
+
+.teams__bar {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.teams__title {
+  flex: 1;
+  min-width: 0;
+  font-size: 1.125rem;
+  overflow-wrap: anywhere;
+}
+
+.teams__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.teams__actions > .btn {
+  flex: 1 1 auto;
+}
+
+.team-list,
+.members {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.team-card,
+.member {
+  display: grid;
+  gap: 0.375rem;
+  padding: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.team-card__main,
+.member__main {
+  display: grid;
+  gap: 0.125rem;
+  min-height: var(--tap);
+  padding: 0.25rem 0.25rem;
+  border: 0;
+  background: none;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.team-card__name,
+.member__name {
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.team-card__meta,
+.member__sub {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem;
+  color: var(--muted);
+  font-size: 0.8125rem;
+  overflow-wrap: anywhere;
+}
+
+.team-card__btns,
+.member__btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+.team-card__btns .btn:first-child {
+  flex: 1 1 auto;
+}
+
+.member__btns {
+  justify-content: flex-end;
+}
+
+.warnings {
+  margin: 0.25rem 0 0;
+  padding-left: 1.125rem;
+  overflow-wrap: anywhere;
+}

@@ -45,6 +45,18 @@ export function loadGenData(gen: GenId): Promise<GenData> {
   return p
 }
 
+/**
+ * Fetches every data chunk of a generation (used by "download for offline"). The service worker
+ * caches the responses; the parsed modules are only kept by the module registry.
+ */
+export async function prefetchGenData(gen: GenId): Promise<void> {
+  await Promise.all([
+    pick(dexLoaders, gen, 'dex.json')(),
+    pick(learnsetLoaders, gen, 'learnsets.json')(),
+    pick(setLoaders, gen, 'sets.json')(),
+  ])
+}
+
 export function loadSets(gen: GenId): Promise<SetsFile> {
   let p = setsCache.get(gen)
   if (!p) {
