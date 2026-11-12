@@ -11,7 +11,6 @@ export const en = {
 
   'top.gen': 'Generation and regulation',
   'top.format': 'Battle format',
-  'top.regulation': 'Regulation',
   'reg.none': 'No filter',
   'reg.notLegal': 'Not legal in {reg}',
   'reg.notLegalWhat': 'Not legal in {reg}: {what}',

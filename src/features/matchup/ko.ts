@@ -17,9 +17,9 @@ export function plainText(html: string): string {
  * `ko2`/`ko3` = (guaranteed/likely) 2HKO / 3HKO, `none` = anything slower or no damage.
  */
 export function koLevel(text: string): KoLevel {
-  const m = /(\d+)HKO/.exec(text)
+  const m = /(\d+|O)HKO/.exec(text)
   if (!m) return 'none'
-  const n = Number(m[1])
+  const n = m[1] === 'O' ? 1 : Number(m[1])
   const chance = /(\d+(?:\.\d+)?)% chance/.exec(text)
   const sure = !chance && !/possible/i.test(text)
   if (n === 1) return sure || (chance && Number(chance[1]) >= 50) ? 'ko1' : 'ko1p'

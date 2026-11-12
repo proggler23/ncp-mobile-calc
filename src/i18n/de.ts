@@ -13,7 +13,6 @@ export const de: Dict = {
 
   'top.gen': 'Generation und Regelwerk',
   'top.format': 'Kampfformat',
-  'top.regulation': 'Regelwerk',
   'reg.none': 'Kein Filter',
   'reg.notLegal': 'In {reg} nicht erlaubt',
   'reg.notLegalWhat': 'In {reg} nicht erlaubt: {what}',
