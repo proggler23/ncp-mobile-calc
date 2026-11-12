@@ -1,5 +1,6 @@
 import { GEN_IDS } from './data/types'
 import { flushMatchup, resetStore } from './state/app'
+import { resetInstall } from './state/install'
 import { resetSupportNudge } from './state/supportNudge'
 import { getRepository } from './storage'
 
@@ -20,7 +21,9 @@ export async function resetAll(settings: { gen: 'sv' | 'champions'; lang?: 'en' 
     lang: settings.lang ?? 'en',
     supportNudge: undefined,
     menuSeen: undefined,
+    installPrompt: undefined,
   })
   resetStore()
   resetSupportNudge()
+  resetInstall()
 }

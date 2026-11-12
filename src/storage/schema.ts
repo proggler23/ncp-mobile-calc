@@ -121,6 +121,14 @@ export const settingsSchema = z.object({
     .optional()
     .catch(undefined),
   menuSeen: z.boolean().optional().catch(undefined),
+  installPrompt: z
+    .object({
+      dismissCount: z.number().int().min(0).max(100),
+      dismissedAt: ts.optional(),
+      installed: z.boolean().optional(),
+    })
+    .optional()
+    .catch(undefined),
 })
 
 const small = z.number().int().min(-1000).max(100_000)

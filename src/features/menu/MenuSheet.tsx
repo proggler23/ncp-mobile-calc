@@ -8,6 +8,8 @@ import { StorageError, errorKey } from '../../state/teams'
 import { Dialog } from '../../ui/Dialog'
 import { Segmented } from '../../ui/controls'
 import { SupportButton } from '../../ui/SupportButton'
+import { InstallHowTo } from '../install/InstallHowTo'
+import { menuInstall, promptInstall, useInstall } from '../../state/install'
 import { DataVersionInfo } from './DataVersionInfo'
 import './menu.css'
 
@@ -17,6 +19,8 @@ export function MenuSheet({ onClose }: { onClose: () => void }) {
   const t = useT()
   const lang = useApp((s) => s.lang)
   const fileInput = useRef<HTMLInputElement>(null)
+  const install = useInstall(menuInstall)
+  const [how, setHow] = useState(false)
   const [msg, setMsg] = useState<Msg>()
   const [file, setFile] = useState<{ name: string; text: string }>()
   const [progress, setProgress] = useState<{ done: number; total: number }>()
@@ -93,6 +97,27 @@ export function MenuSheet({ onClose }: { onClose: () => void }) {
           <SupportButton className="menu__support">{t('menu.support')}</SupportButton>
           <p className="hint">{t('menu.supportHint')}</p>
         </section>
+
+        {install && (
+          <section className="menu__section">
+            {install === 'manual' ? (
+              <p className="hint">
+                {t('install.menu')}: {t('install.menuManual')}
+              </p>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  className="btn"
+                  onClick={() => (install === 'ios' ? setHow(true) : void promptInstall(false))}
+                >
+                  {t('install.menu')}
+                </button>
+                <p className="hint">{t('install.menuHint')}</p>
+              </>
+            )}
+          </section>
+        )}
 
         <section className="menu__section" aria-labelledby="menu-lang">
           <h3 id="menu-lang">{t('menu.language')}</h3>
@@ -188,6 +213,7 @@ export function MenuSheet({ onClose }: { onClose: () => void }) {
           <DataVersionInfo />
         </section>
       </div>
+      {how && <InstallHowTo onClose={() => setHow(false)} />}
     </Dialog>
   )
 }

@@ -124,6 +124,15 @@ export interface SupportNudge {
   triggered?: boolean
 }
 
+/** PWA install banner state. Device-local: never part of a backup. */
+export interface InstallPrompt {
+  /** How often the banner's close button was used (2 = never show again). */
+  dismissCount: number
+  dismissedAt?: number
+  /** The browser reported `appinstalled`. */
+  installed?: boolean
+}
+
 export interface Settings {
   lang: Lang
   gen: GenId
@@ -133,6 +142,8 @@ export interface Settings {
   supportNudge?: SupportNudge
   /** The menu was opened at least once (hides the "new" dot). Device-local, excluded from backups. */
   menuSeen?: boolean
+  /** Device-local, excluded from backups. */
+  installPrompt?: InstallPrompt
 }
 
 export const DEFAULT_SETTINGS: Settings = { lang: 'en', gen: 'champions', format: 'doubles' }

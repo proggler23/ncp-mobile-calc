@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react'
 import { useT } from '../../state/hooks'
+import { useInstall } from '../../state/install'
 import { dismissSupportForever, snoozeSupport, useSupport } from '../../state/supportNudge'
 import { overlayDepth, subscribeOverlays } from '../../ui/overlayStack'
 import { SupportButton } from '../../ui/SupportButton'
@@ -12,7 +13,9 @@ export function SupportNudge() {
   const t = useT()
   const due = useSupport((s) => s.due)
   const overlays = useSyncExternalStore(subscribeOverlays, overlayDepth)
-  if (!due || overlays > 0) return null
+  // The install banner has priority: the nudge waits for the next session.
+  const installShown = useInstall((s) => s.bannerShown)
+  if (!due || overlays > 0 || installShown) return null
   return (
     <section className="nudge" role="region" aria-label={t('support.nudgeLabel')}>
       <p className="nudge__text">{t('support.nudgeText')}</p>

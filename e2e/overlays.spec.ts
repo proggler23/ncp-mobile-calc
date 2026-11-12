@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect } from './fixtures'
 
 test('close a sheet and immediately open another: one history entry, back closes only the sheet', async ({
   page,

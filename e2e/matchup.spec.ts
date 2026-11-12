@@ -1,4 +1,5 @@
-import { test, expect, type Page } from '@playwright/test'
+import { type Page } from '@playwright/test'
+import { test, expect } from './fixtures'
 
 const shot = (page: Page, name: string, project: string) =>
   page.screenshot({ path: `e2e/screenshots/${project.replace(/\s+/g, '-')}-${name}.png` })

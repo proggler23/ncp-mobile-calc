@@ -11,6 +11,8 @@ import {
 } from './state/app'
 import { refreshStaleDownloads } from './pwa'
 import { useApp, useT } from './state/hooks'
+import { InstallBanner, useInstallBanner } from './features/install/InstallBanner'
+import { initInstall } from './state/install'
 import { initSupportNudge, markMenuSeen, useSupport } from './state/supportNudge'
 import { useRoute } from './state/route'
 import { Segmented } from './ui/controls'
@@ -105,6 +107,7 @@ export default function App() {
   useEffect(() => {
     void initApp().then(async () => {
       void initSupportNudge()
+      void initInstall()
       // After an app update, re-download the generations the user had saved for offline use.
       const { prefetchGen } = await import('./bridge/maps')
       await refreshStaleDownloads(GEN_DATA_IDS, (g) => prefetchGen(g as DataGenId))
@@ -116,8 +119,11 @@ export default function App() {
     document.documentElement.lang = lang
   }, [lang])
 
+  const banner = useInstallBanner()
+
   return (
-    <div className="app">
+    <div className={banner ? 'app app--banner' : 'app'}>
+      <InstallBanner />
       <TopBar />
       <main className="app__main">
         {genNotice && (
