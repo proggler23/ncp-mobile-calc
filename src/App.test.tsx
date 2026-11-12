@@ -55,7 +55,7 @@ describe('matchup screen', () => {
         timeout: 20000,
       },
     )
-    expect(screen.getByRole('link', { name: /Create team/ })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '+ Team' })).toBeInTheDocument()
   })
 
   it('renders the same percent ranges as the golden result', async () => {

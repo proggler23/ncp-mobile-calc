@@ -5,10 +5,12 @@ import { navigate } from '../state/route'
 export function NavLink({
   to,
   className,
+  title,
   children,
 }: {
   to: string
   className?: string
+  title?: string
   children: ReactNode
 }) {
   const onClick = (e: MouseEvent<HTMLAnchorElement>) => {
@@ -18,7 +20,7 @@ export function NavLink({
     navigate(to)
   }
   return (
-    <a className={className} href={`#${to}`} onClick={onClick}>
+    <a className={className} title={title} href={`#${to}`} onClick={onClick}>
       {children}
     </a>
   )

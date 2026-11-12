@@ -15,3 +15,20 @@
 .chip__warn {
   color: var(--warn);
 }
+
+.legal-icon {
+  flex: none;
+  min-width: var(--tap);
+  min-height: var(--tap);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--warn);
+  font-size: 1.125rem;
+  cursor: pointer;
+}
+
+.legal-icon[aria-expanded='true'] {
+  background: var(--warn-bg);
+  border-radius: var(--radius);
+}

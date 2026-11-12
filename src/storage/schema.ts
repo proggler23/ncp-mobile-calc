@@ -124,6 +124,15 @@ export const settingsSchema = z.object({
     .optional()
     .catch(undefined),
   menuSeen: z.boolean().optional().catch(undefined),
+  layout: z
+    .object({
+      resultsCollapsed: z.boolean().optional(),
+      cardsCollapsed: z
+        .object({ mine: z.boolean().optional(), opp: z.boolean().optional() })
+        .optional(),
+    })
+    .optional()
+    .catch(undefined),
   installPrompt: z
     .object({
       dismissCount: z.number().int().min(0).max(100),

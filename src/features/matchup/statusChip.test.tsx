@@ -35,7 +35,7 @@ describe('status chip', () => {
     act(() => setMatchup(mine(), opp()))
     render(<Card />)
     const chip = screen.getByRole('button', { name: 'Status: Healthy, change' })
-    expect(chip).toHaveTextContent('Status: —')
+    expect(chip).toHaveTextContent('—')
     fireEvent.click(chip)
     expect(screen.getAllByRole('button', { pressed: true })).toHaveLength(1)
     fireEvent.keyDown(document, { key: 'Escape' })
