@@ -4,6 +4,7 @@ import { normalizeSearch } from '../data/normalize'
 import type { MoveRecord } from '../data/types'
 import type { Lang } from '../storage/types'
 import type { SearchItem } from '../ui/SearchOverlay'
+import { NO_REGULATION } from '../data/types'
 import { getLib } from './lib'
 
 const cache = new Map<string, SearchItem[]>()
@@ -18,12 +19,16 @@ function names(en: string, de: string | undefined, lang: Lang) {
   }
 }
 
-export function speciesItems(gen: DataGenId, lang: Lang): SearchItem[] {
-  const key = `species:${gen}:${lang}`
+/**
+ * The pickers list exactly what is legal in `regulation` ("No filter": everything the engine
+ * knows). `regulation` is the id from the app state (see state/regulation.ts).
+ */
+export function speciesItems(gen: DataGenId, lang: Lang, regulation = NO_REGULATION): SearchItem[] {
+  const key = `species:${gen}:${lang}:${regulation}`
   let out = cache.get(key)
   if (!out) {
     out = getLib()
-      .bridge.engineSpeciesList(gen)
+      .bridge.engineSpeciesList(gen, { regulation })
       .map((s) => {
         const n = names(s.en, s.deMissing ? undefined : s.de, lang)
         return {
@@ -68,26 +73,30 @@ function entityItems(
   return out.sort((a, c) => a.primary.localeCompare(c.primary, lang))
 }
 
-export function itemItems(gen: DataGenId, lang: Lang): SearchItem[] {
-  const key = `items:${gen}:${lang}`
+export function itemItems(gen: DataGenId, lang: Lang, regulation = NO_REGULATION): SearchItem[] {
+  const key = `items:${gen}:${lang}:${regulation}`
   let out = cache.get(key)
-  if (!out) cache.set(key, (out = entityItems(gen, 'items', lang)))
+  if (!out) {
+    const { bridge } = getLib()
+    const pool = bridge.legalPool(gen, regulation)
+    const b = bridge.getBridge(gen)
+    const only = pool && [...pool.items].filter((id) => b.kinds.items.byId.has(id))
+    cache.set(key, (out = entityItems(gen, 'items', lang, only)))
+  }
   return out
 }
 
-export function abilityItems(gen: DataGenId, lang: Lang, only?: readonly string[]): SearchItem[] {
-  if (only) return entityItems(gen, 'abilities', lang, only)
-  const key = `abilities:${gen}:${lang}`
-  let out = cache.get(key)
-  if (!out) cache.set(key, (out = entityItems(gen, 'abilities', lang)))
-  return out
+/** Abilities of one species (`only`, from `legalAbilities`): there is no full-pool listing. */
+export function abilityItems(gen: DataGenId, lang: Lang, only: readonly string[]): SearchItem[] {
+  return entityItems(gen, 'abilities', lang, only)
 }
 
 export function moveItems(
   gen: DataGenId,
   speciesId: string,
   lang: Lang,
+  regulation = NO_REGULATION,
 ): { items: SearchItem[]; reliable: boolean } {
-  const pool = getLib().bridge.movesForSpecies(gen, speciesId)
+  const pool = getLib().bridge.movesForSpecies(gen, speciesId, { regulation })
   return { items: entityItems(gen, 'moves', lang, pool.moveIds), reliable: pool.learnsetReliable }
 }

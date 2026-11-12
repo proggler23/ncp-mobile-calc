@@ -5,7 +5,7 @@ EVs: 32 HP / 2 Atk / 32 Def
 Careful Nature
 - Fake Out
 - Flare Blitz
-- Knock Off
+- Throat Chop
 - Parting Shot
 
 Garchomp @ Life Orb

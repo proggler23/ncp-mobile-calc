@@ -5,7 +5,7 @@ import { createLocalStorageBackend, openBackend } from './backend'
 import type { Backend } from './backend'
 import { createRepository, StorageError } from './repository'
 import type { Repository } from './repository'
-import { parseMatchup, parseSavedSet, parseTeam } from './schema'
+import { parseMatchup, parseSavedSet, parseSettings, parseTeam } from './schema'
 import { emptySpread, LIMITS } from './types'
 import type { SavedSet, SetBody } from './types'
 
@@ -176,6 +176,29 @@ describe('openBackend fallback', () => {
     } finally {
       globalThis.indexedDB = saved
     }
+  })
+})
+
+describe('regulation fields', () => {
+  const team = { uid: 't1', name: 'T', gen: 'champions', members: [], createdAt: 1, updatedAt: 1 }
+  const settings = { lang: 'en', gen: 'champions', format: 'doubles' }
+
+  it('teams are valid with and without a regulation; ids are validated', () => {
+    expect(parseTeam(team)).toBeDefined()
+    expect(parseTeam({ ...team, regulation: 'regmc' })?.regulation).toBe('regmc')
+    expect(parseTeam({ ...team, regulation: 'Reg M-C; <b>' })).toBeUndefined()
+  })
+  it('settings keep a regulation per gen and fall back to "absent" when broken', () => {
+    expect(parseSettings({ ...settings, regulations: { champions: 'regmb', sv: 'none' } })).toEqual(
+      {
+        ...settings,
+        regulations: { champions: 'regmb', sv: 'none' },
+      },
+    )
+    expect(parseSettings(settings)?.regulations).toBeUndefined()
+    // a damaged map must not void the other settings
+    expect(parseSettings({ ...settings, regulations: { champions: 5 } })).toEqual(settings)
+    expect(parseSettings({ ...settings, regulations: { nogen: 'x' } })).toEqual(settings)
   })
 })
 

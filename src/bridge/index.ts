@@ -26,9 +26,12 @@ export {
   displayName,
   engineSpeciesList,
   movesForSpecies,
+  isMoveLegal,
+  buildProblems,
   type EngineSpecies,
   type MovePool,
 } from './catalog'
+export * from './regulations'
 export { applyPreset, applyPresetAsync, loadCommonSets } from './presets'
 export {
   fieldFromAbilities,

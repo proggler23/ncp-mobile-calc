@@ -20,6 +20,7 @@ export default function MatchupScreen() {
   const t = useT()
   const gen = useApp((s) => s.gen)
   const lang = useApp((s) => s.lang)
+  const regulation = useApp((s) => s.regulation)
   const mine = useApp((s) => s.mine)
   const opp = useApp((s) => s.opp)
   const busy = useApp((s) => s.status === 'loading')
@@ -75,7 +76,7 @@ export default function MatchupScreen() {
         <SearchOverlay
           title={t(search === 'mine' ? 'search.titleMine' : 'search.titleOpp')}
           placeholder={t('search.species')}
-          items={speciesItems(gen, lang)}
+          items={speciesItems(gen, lang, regulation)}
           onClose={() => setSearch(null)}
           onPick={(id) => {
             const side = search

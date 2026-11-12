@@ -20,6 +20,7 @@ import type { StatSpread } from '../storage/types'
 import { emptySpread } from '../storage/types'
 import { commonSetToSet } from './convert'
 import { genMeta } from './gens'
+import { isSpeciesLegal } from './regulations'
 import type { DataGenId, PresetId, SavedSetLike } from './types'
 import { own } from '../own'
 
@@ -80,7 +81,10 @@ export function applyPreset<T extends SavedSetLike>(
 export async function loadCommonSets(
   gen: DataGenId,
   speciesId: string,
+  regulation?: string,
 ): Promise<CommonSet[] | undefined> {
+  // Only species that are legal in the regulation get common sets.
+  if (regulation && !isSpeciesLegal(gen, regulation, speciesId)) return undefined
   const sets = await loadSets(gen)
   return own(sets, speciesId)
 }
@@ -90,7 +94,8 @@ export async function applyPresetAsync<T extends SavedSetLike>(
   gen: DataGenId,
   set: T,
   preset: PresetId,
+  regulation?: string,
 ): Promise<T | SavedSetLike | undefined> {
   if (preset !== 'common') return applyPreset(gen, set, preset)
-  return applyPreset(gen, set, 'common', await loadCommonSets(gen, set.speciesId))
+  return applyPreset(gen, set, 'common', await loadCommonSets(gen, set.speciesId, regulation))
 }

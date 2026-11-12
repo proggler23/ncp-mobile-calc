@@ -1,4 +1,5 @@
 import { GEN_META } from '../bridge/gens'
+import { NO_REGULATION } from '../data/types'
 import type { DataGenId, PresetId, SavedSetLike } from '../bridge/types'
 import type { CommonSet } from '../data/types'
 import type { CalcInput, CalcResult } from '../engine/types'
@@ -42,6 +43,10 @@ export interface AppState {
   lang: Lang
   gen: DataGenId
   format: Format
+  /** Active regulation of `gen` (resolved: a regulation id of the generation or "none"). */
+  regulation: string
+  /** Saved regulation choice per generation (see `setRegulation`). */
+  regulations: Partial<Record<DataGenId, string>>
   /** The active team (any generation). */
   team?: Team
   /** All saved teams / custom sets (every generation), newest first. */
@@ -72,6 +77,8 @@ const initialState = (): AppState => ({
   lang: detectLang(),
   gen: DEFAULT_SETTINGS.gen,
   format: DEFAULT_SETTINGS.format,
+  regulation: NO_REGULATION,
+  regulations: {},
   teams: [],
   customSets: [],
   oppPreset: null,
@@ -131,7 +138,14 @@ export async function getRepository() {
   return (await import('../storage')).getRepository()
 }
 
-async function persist(patch: Partial<{ lang: Lang; gen: DataGenId; format: Format }>) {
+async function persist(
+  patch: Partial<{
+    lang: Lang
+    gen: DataGenId
+    format: Format
+    regulations: Partial<Record<DataGenId, string>>
+  }>,
+) {
   try {
     await (await getRepository()).setSettings(patch)
   } catch {
@@ -172,7 +186,8 @@ async function boot(): Promise<void> {
   let gen = settings.gen
   const meta = GEN_META[gen]
   let format = meta.formats.includes(settings.format) ? settings.format : meta.defaultFormat
-  store.set({ status: 'loading', lang: settings.lang, gen, format })
+  const regulations = settings.regulations ?? {}
+  store.set({ status: 'loading', lang: settings.lang, gen, format, regulations })
   try {
     await prepareLib(gen)
   } catch (e) {
@@ -191,7 +206,12 @@ async function boot(): Promise<void> {
     store.set({ gen, format })
   }
   const saved = await loadStoredMatchup(gen)
-  commit({ status: 'ready', booted: true, ...saved })
+  commit({
+    status: 'ready',
+    booted: true,
+    regulation: getLib().bridge.resolveRegulationId(gen, regulations[gen]),
+    ...saved,
+  })
   const { team, mine } = store.get()
   if (!mine && team && team.gen === gen && team.members.length > 0) selectTeamMember(0)
   if (store.get().opp) void refreshCommon()
@@ -237,6 +257,17 @@ export function setFormat(format: Format): void {
   void persist({ format })
 }
 
+/** Select the regulation of the current generation (persisted per generation). */
+export function setRegulation(id: string): void {
+  const { gen, regulations } = store.get()
+  const regulation = getLib().bridge.resolveRegulationId(gen, id)
+  const next = { ...regulations, [gen]: regulation }
+  // Builds that are not legal any more stay as they are (the cards show a marker).
+  commit({ regulation, regulations: next })
+  void persist({ regulations: next })
+  void refreshCommon()
+}
+
 export async function setGen(gen: DataGenId): Promise<void> {
   const prev = store.get()
   if (gen === prev.gen || prev.status === 'loading') return
@@ -266,6 +297,7 @@ export async function setGen(gen: DataGenId): Promise<void> {
     error: undefined,
     gen,
     format,
+    regulation: getLib().bridge.resolveRegulationId(gen, prev.regulations[gen]),
     mine,
     opp,
     mineTeamIndex: undefined,
@@ -441,7 +473,7 @@ async function loadStoredMatchup(
 
 async function loadSets(gen: DataGenId, speciesId: string): Promise<CommonSet[] | undefined> {
   try {
-    return await getLib().bridge.loadCommonSets(gen, speciesId)
+    return await getLib().bridge.loadCommonSets(gen, speciesId, store.get().regulation)
   } catch {
     return undefined // generation without usage data
   }
@@ -510,7 +542,7 @@ export async function applyOppPreset(preset: PresetId): Promise<void> {
   const { gen, opp } = store.get()
   if (!opp) return
   const token = ++tokens.opp
-  const next = await getLib().bridge.applyPresetAsync(gen, opp, preset)
+  const next = await getLib().bridge.applyPresetAsync(gen, opp, preset, store.get().regulation)
   const cur = store.get()
   // Discard when anything wrote the opponent meanwhile (species change, edit, swap, ...).
   if (!next || token !== tokens.opp || cur.opp !== opp || cur.gen !== gen) return

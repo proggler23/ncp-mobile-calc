@@ -86,6 +86,7 @@ export const teamSchema = z.object({
   uid: id,
   name,
   gen: genId,
+  regulation: dexId.optional(),
   members: z.array(savedSetSchema).max(LIMITS.maxMembers),
   createdAt: ts,
   updatedAt: ts,
@@ -107,6 +108,8 @@ export const settingsSchema = z.object({
   lang: z.enum(['de', 'en']),
   gen: genId,
   activeTeamUid: id.optional(),
+  // A broken map falls back to "absent" (= default regulations) instead of voiding all settings.
+  regulations: z.partialRecord(genId, dexId).optional().catch(undefined),
   format: z.enum(['singles', 'doubles']),
   // Device-local extras: a broken value falls back to "absent" instead of voiding all settings.
   supportNudge: z

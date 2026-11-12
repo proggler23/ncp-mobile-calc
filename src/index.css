@@ -156,6 +156,47 @@ p {
   max-width: 7.5rem;
 }
 
+/* Regulation select (only for generations that have regulations). Gen select + format switch +
+   menu already fill a 360px row (16px text, 44px targets), so on narrow screens the regulation
+   gets its own full-width row directly below; from 560px it sits next to the gen select. */
+.topbar {
+  flex-wrap: wrap;
+}
+
+.topbar__reg {
+  order: 10;
+  flex: 1 1 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.topbar__reg-label {
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+
+.topbar__reg .select {
+  flex: 1;
+  min-width: 0;
+}
+
+@media (min-width: 560px) {
+  .topbar__reg {
+    order: 0;
+    flex: 0 1 auto;
+  }
+
+  .topbar__reg-label {
+    display: none;
+  }
+
+  .topbar__reg .select {
+    width: auto;
+    max-width: 8rem;
+  }
+}
+
 /* ---- buttons / inputs ---- */
 .btn {
   display: inline-flex;

@@ -2,6 +2,7 @@ import { act, cleanup, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 import type { DataVersionInfo as VersionInfo } from '../../data/version'
 import { store } from '../../state/app'
+import { prepareLib } from '../../state/lib'
 import { DataVersionInfo, formatDataDate, formatUsageMonth } from './DataVersionInfo'
 
 const info: VersionInfo = {
@@ -45,6 +46,37 @@ describe('DataVersionInfo', () => {
   it('reports missing usage data for a generation without months', () => {
     show('en', 'gsc')
     expect(screen.getByText('no usage data')).toBeInTheDocument()
+  })
+
+  it('shows the active regulation and where its list comes from', async () => {
+    await prepareLib('champions')
+    const withRegs: VersionInfo = {
+      ...info,
+      regulations: {
+        champions: {
+          regmc: { source: 'manual', verified: true },
+          regmb: { source: 'showdown' },
+          regma: { source: 'manual', verified: false },
+        },
+      },
+    }
+    const view = (lang: 'en' | 'de', regulation: string) => {
+      cleanup()
+      act(() => store.set({ lang, gen: 'champions', regulation }))
+      render(<DataVersionInfo info={withRegs} />)
+    }
+    view('en', 'regmc')
+    expect(screen.getByText('Reg M-C (hand-maintained list)')).toBeInTheDocument()
+    view('en', 'regmb')
+    expect(screen.getByText('Reg M-B (derived from Pokémon Showdown)')).toBeInTheDocument()
+    view('en', 'regma')
+    expect(screen.getByText('Reg M-A (hand-maintained list, not verified)')).toBeInTheDocument()
+    view('en', 'none')
+    expect(screen.getByText('No filter (all entries the calculator knows)')).toBeInTheDocument()
+    view('de', 'regmc')
+    expect(screen.getByText('Regelwerk')).toBeInTheDocument()
+    expect(screen.getByText('Reg. M-C (handgepflegte Liste)')).toBeInTheDocument()
+    act(() => store.set({ regulation: 'none' }))
   })
 
   it('formats helpers and tolerates bad input', () => {

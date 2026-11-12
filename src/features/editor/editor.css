@@ -56,6 +56,15 @@
   white-space: nowrap;
 }
 
+.picker--static {
+  cursor: default;
+  color: var(--muted);
+}
+
+.picker--static .picker__value {
+  font-weight: 400;
+}
+
 .picker--add {
   display: flex;
   color: var(--accent);

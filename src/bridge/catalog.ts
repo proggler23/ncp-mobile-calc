@@ -4,6 +4,7 @@ import { normalizeSearch } from '../data'
 import { entityNames, getBridge, isNatDexOnly, isNcpOnly, isPrimary, type Bridge } from './maps'
 import type { DataGenId, EntityKind } from './types'
 import { hiddenPowerTypeOfMove } from './hidden-power'
+import { legalityProblems, legalPool, type LegalityProblems } from './regulations'
 import { own } from '../own'
 
 /** Display name of an entity; falls back to the NCP English name (and English for `de`). */
@@ -40,14 +41,16 @@ export interface EngineSpecies {
  */
 export function engineSpeciesList(
   gen: DataGenId,
-  opts: { includeNatDexOnly?: boolean } = {},
+  opts: { includeNatDexOnly?: boolean; regulation?: string } = {},
 ): EngineSpecies[] {
   const b = getBridge(gen)
+  const legal = opts.regulation ? legalPool(gen, opts.regulation) : undefined
   const nums = new Map(b.data.species.map((r) => [r.id, r.num]))
   const out: EngineSpecies[] = []
   for (const e of b.map.species) {
     if (!isPrimary(e)) continue
     if (opts.includeNatDexOnly === false && isNatDexOnly(e)) continue
+    if (legal && !legal.species.has(e[0])) continue
     const names = entityNames(b, 'species', e[0]) ?? { en: e[1], de: undefined }
     const de = names.de ?? names.en
     out.push({
@@ -82,22 +85,33 @@ function engineMoveIds(b: Bridge, natDex: boolean): string[] {
 /**
  * Moves a species can use in this generation: its learnset intersected with the moves the engine
  * knows (typed Hidden Power ids are added when the species learns Hidden Power). `natDex` defaults
- * to whether the species itself is National Dex-only.
+ * to whether the species itself is National Dex-only. With a `regulation`, the learnset gets the
+ * regulation's changes applied and is intersected with the regulation's moves.
  */
 export function movesForSpecies(
   gen: DataGenId,
   speciesId: string,
-  opts: { natDex?: boolean } = {},
+  opts: { natDex?: boolean; regulation?: string } = {},
 ): MovePool {
   const b = getBridge(gen)
   const entry = b.kinds.species.byId.get(speciesId)
   const natDex = opts.natDex ?? (entry !== undefined && isNatDexOnly(entry))
-  const known = engineMoveIds(b, natDex)
+  const reg = opts.regulation ? legalPool(gen, opts.regulation) : undefined
+  const known = engineMoveIds(b, natDex).filter((id) => !reg?.moves || reg.moves.has(id))
   const knownSet = new Set(known)
 
   const rec = b.data.species.find((r) => r.id === speciesId)
-  const learnset =
+  let learnset =
     own(b.data.learnsets, speciesId) ?? (rec?.base ? own(b.data.learnsets, rec.base) : undefined)
+  const delta = reg?.record.learnsets
+  if (learnset && delta) {
+    const pick = (d: Record<string, string[]> | undefined) =>
+      own(d ?? {}, speciesId) ?? (rec?.base ? own(d ?? {}, rec.base) : undefined)
+    const remove = new Set(pick(delta.remove))
+    learnset = [...new Set([...learnset, ...(pick(delta.add) ?? [])])].filter(
+      (id) => !remove.has(id),
+    )
+  }
   const hits: string[] = []
   if (learnset) {
     for (const id of learnset) if (knownSet.has(id)) hits.push(id)
@@ -111,4 +125,24 @@ export function movesForSpecies(
   if (reliable) return { moveIds: hits, learnsetReliable: true }
   const rest = known.filter((id) => !hits.includes(id))
   return { moveIds: [...hits, ...rest], learnsetReliable: false }
+}
+
+/** Is `moveId` usable by `speciesId` in `regulation` (learnset + regulation changes)? */
+export function isMoveLegal(
+  gen: DataGenId,
+  regulation: string,
+  speciesId: string,
+  moveId: string,
+): boolean {
+  if (!legalPool(gen, regulation)) return true
+  return movesForSpecies(gen, speciesId, { regulation }).moveIds.includes(moveId)
+}
+
+/** What of a build is not legal in `regulation` (undefined: all legal or "No filter"). */
+export function buildProblems(
+  gen: DataGenId,
+  regulation: string,
+  set: { speciesId: string; itemId?: string; moveIds: readonly string[] },
+): LegalityProblems | undefined {
+  return legalityProblems(gen, regulation, set, (sp, mv) => isMoveLegal(gen, regulation, sp, mv))
 }

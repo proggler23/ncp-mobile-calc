@@ -1,6 +1,7 @@
 import { getDataVersionInfo, type DataVersionInfo as VersionInfo } from '../../data/version'
 import type { Lang } from '../../i18n'
 import { useApp, useT } from '../../state/hooks'
+import { regulationName } from '../../state/regulation'
 
 export const NCP_REPO_URL = 'https://github.com/nerd-of-now/NCP-VGC-Damage-Calculator'
 
@@ -25,7 +26,17 @@ export function DataVersionInfo({ info = getDataVersionInfo() }: { info?: Versio
   const t = useT()
   const lang = useApp((s) => s.lang)
   const gen = useApp((s) => s.gen)
+  const regulation = useApp((s) => s.regulation)
   const months = info.usageMonths[gen] ?? []
+  const regInfo = info.regulations?.[gen]?.[regulation]
+  const regSource =
+    regInfo === undefined
+      ? t('menu.data.regSource.none')
+      : regInfo.source === 'showdown'
+        ? t('menu.data.regSource.showdown')
+        : regInfo.verified === false
+          ? t('menu.data.regSource.unverified')
+          : t('menu.data.regSource.manual')
   return (
     <dl className="data-info" aria-label={t('menu.data.title')}>
       <dt>{t('menu.data.ncp')}</dt>
@@ -38,6 +49,10 @@ export function DataVersionInfo({ info = getDataVersionInfo() }: { info?: Versio
       <dd>{formatDataDate(info.ncpSyncedAt, lang)}</dd>
       <dt>{t('menu.data.showdown')}</dt>
       <dd>{info.showdownVersion}</dd>
+      <dt>{t('menu.data.regulation')}</dt>
+      <dd>
+        {regulationName(gen, regulation, lang)} ({regSource})
+      </dd>
       <dt>{t('menu.data.usage')}</dt>
       <dd>
         {months.length

@@ -65,6 +65,23 @@ Key points:
   `src/storage/repository.ts` and `src/storage/showdown.ts`.
 - Battle state (boosts, status, HP) is not saved with sets.
 
+## Regulations
+
+- Data: `src/data/generated/<gen>/regulations.json` (champions: Reg M-C default, M-B, M-A; sv: Reg I
+  default, G, D, C), loaded with the gen's dex (`GenData.regulations`). The synthetic "No filter"
+  (`none`) is available for every gen and means the previous behaviour (everything the engine knows).
+- `src/bridge/regulations.ts` (legal pool sets, defaults, `buildProblems`) and `catalog.ts`
+  (`engineSpeciesList` / `movesForSpecies` take a `regulation`; learnset + regulation changes,
+  intersected with the regulation's moves) are the single place that applies a regulation.
+- State: `AppState.regulation` (resolved, current gen) and `regulations` (saved choice per gen, also
+  in `Settings.regulations` and in backups). `setRegulation`, `setGen` resolve it; teams keep an
+  optional `regulation` (absent = the active one). Pickers (species, items, moves; abilities are
+  always the species' own) are strictly legal; saved builds that are not legal stay and carry a
+  "not legal in Reg X" marker (`features/regulation/LegalBadge`); paste import warns but keeps them.
+- UI: the regulation select sits in the top bar. At 360px the gen select, the 1v1/2v2 switch and the
+  menu already fill the row (16px text, 44px targets), so below 560px it gets its own full-width row
+  under them; from 560px it sits next to the gen select. Only gens with regulations show it.
+
 ## Generated data and provenance
 
 - `src/data/generated/<gen>/` (dex, learnsets, sets), `src/bridge/generated/` (name maps) and
