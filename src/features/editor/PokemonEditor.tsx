@@ -6,6 +6,7 @@ import type { Key } from '../../i18n'
 import { abilityItems, itemItems, moveItems, speciesItems } from '../../state/catalog'
 import { useApp, useT } from '../../state/hooks'
 import { getLib } from '../../state/lib'
+import { statusOptions } from '../../state/status'
 import {
   MULTI_HIT_MAX,
   NATURES,
@@ -48,16 +49,6 @@ export const TYPES = [
   'Steel',
   'Fairy',
 ] as const
-
-const STATUSES: Status[] = [
-  'Healthy',
-  'Poisoned',
-  'Badly Poisoned',
-  'Burned',
-  'Paralyzed',
-  'Asleep',
-  'Frozen',
-]
 
 const BOOST_KEYS: BoostKey[] = ['atk', 'def', 'spa', 'spd', 'spe']
 
@@ -408,7 +399,7 @@ export function PokemonEditor({
                 value={set.status ?? 'Healthy'}
                 onChange={(e) => patch({ status: e.target.value as Status })}
               >
-                {[...STATUSES, ...(gen === 'za' ? (['Drowsy'] as Status[]) : [])].map((s) => (
+                {statusOptions(gen).map((s) => (
                   <option key={s} value={s}>
                     {t(`status.${s}` as Key)}
                   </option>

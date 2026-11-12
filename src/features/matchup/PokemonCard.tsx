@@ -1,8 +1,12 @@
+import { useEffect, useRef, useState } from 'react'
 import { GEN_META } from '../../bridge/gens'
 import type { DataGenId, SavedSetLike } from '../../bridge/types'
 import type { Key } from '../../i18n'
 import { useApp, useT } from '../../state/hooks'
 import { getLib } from '../../state/lib'
+import { statusOptions } from '../../state/status'
+import type { Status } from '../../engine/types'
+import { updateSet } from '../../state/app'
 import { investmentOf, STAT_ORDER, statLimits } from '../../state/sets'
 import type { Side } from '../../state/app'
 
@@ -30,6 +34,74 @@ function spreadSummary(gen: DataGenId, set: SavedSetLike, t: ReturnType<typeof u
   return [nature, spread].filter(Boolean).join(' · ')
 }
 
+/**
+ * One-tap status: the chip shows the current status, tapping it expands an inline strip of the
+ * generation's options inside the card. Inline (no overlay, no history entry): outside tap, Escape
+ * or the chip itself close it.
+ */
+function StatusChip({
+  side,
+  gen,
+  status,
+  role,
+}: {
+  side: Side
+  gen: DataGenId
+  status: Status
+  role: string
+}) {
+  const t = useT()
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLSpanElement>(null)
+  useEffect(() => {
+    if (!open) return
+    const away = (e: Event) => {
+      if (!ref.current?.contains(e.target as Node)) setOpen(false)
+    }
+    const esc = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false)
+    document.addEventListener('pointerdown', away)
+    document.addEventListener('keydown', esc)
+    return () => {
+      document.removeEventListener('pointerdown', away)
+      document.removeEventListener('keydown', esc)
+    }
+  }, [open])
+  const code = (s: Status) => t(`status.code.${s}` as Key)
+  const pick = (s: Status) => {
+    updateSet(side, (cur) => ({ ...cur, status: s }))
+    setOpen(false)
+  }
+  return (
+    <span className="status" ref={ref}>
+      <button
+        type="button"
+        className={`status__chip status--${status.replace(' ', '')}`}
+        aria-expanded={open}
+        aria-label={t('card.statusChange', { status: t(`status.${status}` as Key) })}
+        onClick={() => setOpen(!open)}
+      >
+        {status === 'Healthy' ? t('card.status', { status: code(status) }) : code(status)}
+      </button>
+      {open && (
+        <span className="status__strip" role="group" aria-label={t('card.statusOptions', { role })}>
+          {statusOptions(gen).map((s) => (
+            <button
+              type="button"
+              key={s}
+              className={`status__opt status--${s.replace(' ', '')}`}
+              aria-pressed={s === status}
+              aria-label={t(`status.${s}` as Key)}
+              onClick={() => pick(s)}
+            >
+              {code(s)}
+            </button>
+          ))}
+        </span>
+      )}
+    </span>
+  )
+}
+
 export function PokemonCard({ side, gen, set, onSearch, onEdit }: Props) {
   const t = useT()
   const lang = useApp((s) => s.lang)
@@ -55,7 +127,7 @@ export function PokemonCard({ side, gen, set, onSearch, onEdit }: Props) {
   const boosts = (Object.entries(set.boosts ?? {}) as [string, number][])
     .filter(([, v]) => v !== 0)
     .map(([k, v]) => `${v > 0 ? '+' : ''}${v} ${t(`stat.${k}` as Key)}`)
-  const status = set.status && set.status !== 'Healthy' ? set.status : undefined
+  const status: Status = set.status ?? 'Healthy'
   const itemAbility = [
     meta.hasAbilities && set.abilityId ? name('abilities', set.abilityId) : undefined,
     meta.hasItems && set.itemId ? name('items', set.itemId) : undefined,
@@ -101,23 +173,21 @@ export function PokemonCard({ side, gen, set, onSearch, onEdit }: Props) {
       >
         <div className={`hp__fill ${hpClass}`} style={{ width: `${pct}%` }} />
       </div>
-      {(status || set.teraType || boosts.length > 0 || set.dynamax) && (
-        <p className="card__badges">
-          {status && <span className="badge">{t(`status.${status}` as Key)}</span>}
-          {set.teraType && (
-            <span className={`badge${set.terastallized ? ' badge--on' : ''}`}>
-              {set.terastallized ? '✦ ' : ''}
-              {t('card.tera')} {t(`type.${set.teraType}` as Key)}
-            </span>
-          )}
-          {set.dynamax && <span className="badge badge--on">{set.gmax ? 'G-Max' : 'Dynamax'}</span>}
-          {boosts.map((b) => (
-            <span className="badge" key={b}>
-              {b}
-            </span>
-          ))}
-        </p>
-      )}
+      <p className="card__badges">
+        <StatusChip side={side} gen={gen} status={status} role={role} />
+        {set.teraType && (
+          <span className={`badge${set.terastallized ? ' badge--on' : ''}`}>
+            {set.terastallized ? '✦ ' : ''}
+            {t('card.tera')} {t(`type.${set.teraType}` as Key)}
+          </span>
+        )}
+        {set.dynamax && <span className="badge badge--on">{set.gmax ? 'G-Max' : 'Dynamax'}</span>}
+        {boosts.map((b) => (
+          <span className="badge" key={b}>
+            {b}
+          </span>
+        ))}
+      </p>
     </article>
   )
 }

@@ -333,3 +333,98 @@
 .saved-btn {
   width: 100%;
 }
+
+/* ---- status chip (card) ---- */
+.card__badges {
+  align-items: center;
+}
+
+.status {
+  display: contents;
+}
+
+.status__chip,
+.status__opt {
+  min-height: var(--tap);
+  min-width: var(--tap);
+  padding: 0 0.625rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+
+.status__strip {
+  display: flex;
+  flex-wrap: wrap;
+  flex-basis: 100%;
+  gap: 0.25rem;
+  order: 2;
+}
+
+.status__opt[aria-pressed='true'] {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* light mode: dark text on tinted backgrounds, dark mode: light text on deep ones (AA) */
+.status--Burned {
+  background: #fed7aa;
+  color: #7c2d12;
+  border-color: #c2410c;
+}
+.status--Paralyzed {
+  background: #fef08a;
+  color: #713f12;
+  border-color: #a16207;
+}
+.status--Poisoned,
+.status--BadlyPoisoned {
+  background: #e9d5ff;
+  color: #581c87;
+  border-color: #7e22ce;
+}
+.status--Asleep,
+.status--Drowsy {
+  background: #e2e8f0;
+  color: #334155;
+  border-color: #64748b;
+}
+.status--Frozen {
+  background: #bae6fd;
+  color: #0c4a6e;
+  border-color: #0369a1;
+}
+
+@media (prefers-color-scheme: dark) {
+  .status--Burned {
+    background: #7c2d12;
+    color: #ffedd5;
+    border-color: #fb923c;
+  }
+  .status--Paralyzed {
+    background: #713f12;
+    color: #fef9c3;
+    border-color: #facc15;
+  }
+  .status--Poisoned,
+  .status--BadlyPoisoned {
+    background: #581c87;
+    color: #f3e8ff;
+    border-color: #c084fc;
+  }
+  .status--Asleep,
+  .status--Drowsy {
+    background: #334155;
+    color: #f1f5f9;
+    border-color: #94a3b8;
+  }
+  .status--Frozen {
+    background: #0c4a6e;
+    color: #e0f2fe;
+    border-color: #38bdf8;
+  }
+}
