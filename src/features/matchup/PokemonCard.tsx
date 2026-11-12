@@ -160,7 +160,6 @@ export function PokemonCard({ side, gen, set, onSearch, onEdit }: Props) {
           ✎
         </button>
       </div>
-      <LegalBadge gen={gen} regulation={regulation} set={set} />
       {itemAbility.length > 0 && <p className="card__line">{itemAbility.join(' · ')}</p>}
       <p className="card__line card__line--muted card__spread">
         <span>{spreadSummary(gen, set, t)}</span>
@@ -178,6 +177,7 @@ export function PokemonCard({ side, gen, set, onSearch, onEdit }: Props) {
       </div>
       <p className="card__badges">
         <StatusChip side={side} gen={gen} status={status} role={role} />
+        <LegalBadge gen={gen} regulation={regulation} set={set} />
         {set.teraType && (
           <span className={`badge${set.terastallized ? ' badge--on' : ''}`}>
             {set.terastallized ? '✦ ' : ''}
