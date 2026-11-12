@@ -3,7 +3,10 @@ import { GEN_META } from '../../bridge/gens'
 import type { BoostKey, DataGenId, MoveOverride, SavedSetLike } from '../../bridge/types'
 import type { FinalStats, Status } from '../../engine/types'
 import type { Key } from '../../i18n'
-import { abilityItems, itemItems, moveItems, speciesItems } from '../../state/catalog'
+import { abilityItems, itemItems, moveItems, natureItems, speciesItems } from '../../state/catalog'
+import { popularList, popularRegulation, usePopularFile } from '../../state/popular'
+import type { PopularKind } from '../../state/popular'
+import { regulationName } from '../../state/regulation'
 import { useApp, useT } from '../../state/hooks'
 import { getLib } from '../../state/lib'
 import { statusOptions } from '../../state/status'
@@ -26,6 +29,8 @@ import type { StatKey } from '../../storage/types'
 import { emptySpread } from '../../storage/types'
 import { Field, Segmented, Stepper, Toggle } from '../../ui/controls'
 import { SearchOverlay } from '../../ui/SearchOverlay'
+import type { PopularSection } from '../../ui/SearchOverlay'
+import { formatUsageMonth } from '../menu/DataVersionInfo'
 import { LegalBadge } from '../regulation/LegalBadge'
 import './editor.css'
 import { own } from '../../own'
@@ -53,7 +58,8 @@ export const TYPES = [
 
 const BOOST_KEYS: BoostKey[] = ['atk', 'def', 'spa', 'spd', 'spe']
 
-type Picker = { kind: 'species' | 'item' | 'ability' } | { kind: 'move'; slot: number } | null
+type Picker =
+  { kind: 'species' | 'item' | 'ability' | 'nature' } | { kind: 'move'; slot: number } | null
 
 export interface PokemonEditorProps {
   gen: DataGenId
@@ -96,8 +102,31 @@ export function PokemonEditor({
   const rec = speciesRecord(gen, set.speciesId)
   const abilities = legalAbilities(gen, set.speciesId)
   const patch = (p: Partial<SavedSetLike>) => onChange({ ...set, ...p })
+  const nature = own(NATURES, set.nature ?? 'Serious')
 
   const closePicker = () => setPicker(null)
+
+  // "Popular in Reg X" section of a picker: Smogon usage of this species in the regulation. Absent
+  // for "No filter", species/regulations without data; the overlay drops entries that are not
+  // offered right now (illegal, not learnable, not an own ability).
+  const popularFile = usePopularFile(gen)
+  const popularSection = (
+    kind: PopularKind,
+    all: 'moves' | 'items' | 'abilities' | 'natures',
+  ): PopularSection | undefined => {
+    const entries = popularList(popularFile, regulation, set.speciesId, kind)
+    const stats = popularRegulation(popularFile, regulation)
+    if (!entries || !stats) return undefined
+    return {
+      title: t('pop.title', { reg: regulationName(gen, regulation, lang) }),
+      allTitle: t(`pop.all.${all}` as Key),
+      caption: t('pop.source', {
+        cutoff: stats.cutoff,
+        month: formatUsageMonth(stats.month, lang),
+      }),
+      entries,
+    }
+  }
 
   // ----- moves ---------------------------------------------------------------------------------
   const setOverride = (i: number, p: Partial<MoveOverride>) => {
@@ -198,20 +227,23 @@ export function PokemonEditor({
             </div>
           )}
           {meta.engineGen >= 3 && (
-            <Field label={t('ed.nature')}>
-              <select
-                className="select"
-                value={set.nature ?? 'Serious'}
-                onChange={(e) => patch({ nature: e.target.value })}
+            <div className="field">
+              <span className="field__label" id="ed-nature-label">
+                {t('ed.nature')}
+              </span>
+              <button
+                type="button"
+                className="picker"
+                aria-labelledby="ed-nature-label ed-nature-value"
+                onClick={() => setPicker({ kind: 'nature' })}
               >
-                {Object.entries(NATURES).map(([n, pm]) => (
-                  <option key={n} value={n}>
-                    {t(`nature.${n}` as Key)}
-                    {pm ? ` (+${statLabel(pm[0])} −${statLabel(pm[1])})` : ''}
-                  </option>
-                ))}
-              </select>
-            </Field>
+                <span className="picker__value" id="ed-nature-value">
+                  {t(`nature.${set.nature ?? 'Serious'}` as Key)}
+                  {nature ? ` (+${statLabel(nature[0])} −${statLabel(nature[1])})` : ''}
+                </span>
+                <span aria-hidden="true">🔍</span>
+              </button>
+            </div>
           )}
         </div>
         {meta.hasAbilities &&
@@ -523,11 +555,25 @@ export function PokemonEditor({
           }}
         />
       )}
+      {picker?.kind === 'nature' && (
+        <SearchOverlay
+          title={t('ed.nature')}
+          placeholder={t('search.nature')}
+          items={natureItems(lang)}
+          popular={popularSection('natures', 'natures')}
+          onClose={closePicker}
+          onPick={(id) => {
+            patch({ nature: id })
+            closePicker()
+          }}
+        />
+      )}
       {picker?.kind === 'ability' && (
         <SearchOverlay
           title={t('ed.ability')}
           placeholder={t('search.ability')}
           items={abilityItems(gen, lang, abilities)}
+          popular={popularSection('abilities', 'abilities')}
           onClose={closePicker}
           onPick={(id) => {
             patch({ abilityId: id })
@@ -540,6 +586,7 @@ export function PokemonEditor({
           title={t('ed.item')}
           placeholder={t('search.item')}
           items={itemItems(gen, lang, regulation)}
+          popular={popularSection('items', 'items')}
           clearLabel={t('ed.noItem')}
           onClose={closePicker}
           onPick={(id) => {
@@ -559,6 +606,7 @@ export function PokemonEditor({
               title={t('ed.move', { n: picker.slot + 1 })}
               placeholder={t('search.move')}
               items={items}
+              popular={popularSection('moves', 'moves')}
               notice={reliable ? undefined : t('ed.learnsetUnreliable')}
               onClose={closePicker}
               onPick={(id) => pickMove(picker.slot, id)}

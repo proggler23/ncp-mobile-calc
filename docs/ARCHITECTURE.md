@@ -42,7 +42,7 @@ Key points:
 - **Engine:** `prepare(gen)` evaluates NCP's scripts from three `?raw` chunks (`data`, `logic`, `za`)
   that load on first use.
 - **Game data:** `loadGenData(gen)` loads each generation's `dex.json` and `learnsets.json` as separate
-  chunks through `import.meta.glob`. Common sets (`sets.json`) load on demand. Name maps are
+  chunks through `import.meta.glob`. Common sets (`sets.json`) and the per-regulation popular lists (`popular.json`, `loadPopular`) load on demand. Name maps are
   per generation (`genmap-<gen>` chunks, `prefetchGen`).
 - **Precache:** the build precaches everything except the data of generations other than Champions
   (`PRECACHED_GEN` in `vite.config.ts`). Champions therefore works offline immediately.

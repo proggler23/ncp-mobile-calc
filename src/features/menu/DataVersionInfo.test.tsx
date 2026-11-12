@@ -85,3 +85,39 @@ describe('DataVersionInfo', () => {
     expect(formatUsageMonth('2026-10', 'en')).toBe('Oct 2026')
   })
 })
+
+describe('DataVersionInfo popular lists', () => {
+  const withPopular: VersionInfo = {
+    ...info,
+    popular: {
+      champions: { regmc: { format: 'gen9championsvgc2026regmc', month: '2026-10', cutoff: 1760 } },
+    },
+  }
+  const view = (lang: 'en' | 'de', regulation: string) => {
+    cleanup()
+    act(() => store.set({ lang, gen: 'champions', regulation }))
+    render(<DataVersionInfo info={withPopular} />)
+  }
+  it('shows the source and month of the active regulation (en/de)', async () => {
+    await prepareLib('champions')
+    view('en', 'regmc')
+    expect(screen.getByText('Popular lists')).toBeInTheDocument()
+    expect(
+      screen.getByText('Smogon gen9championsvgc2026regmc, Oct 2026, 1760+'),
+    ).toBeInTheDocument()
+    view('de', 'regmc')
+    expect(screen.getByText('Beliebtheitslisten')).toBeInTheDocument()
+    expect(
+      screen.getByText('Smogon gen9championsvgc2026regmc, Okt. 2026, 1760+'),
+    ).toBeInTheDocument()
+    act(() => store.set({ regulation: 'none', lang: 'en' }))
+  })
+  it('says there is none for a regulation without data and for "No filter"', async () => {
+    await prepareLib('champions')
+    view('en', 'regmb')
+    expect(screen.getByText('none for this regulation')).toBeInTheDocument()
+    view('en', 'none')
+    expect(screen.getByText('none for this regulation')).toBeInTheDocument()
+    act(() => store.set({ regulation: 'none' }))
+  })
+})

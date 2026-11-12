@@ -126,6 +126,45 @@
   font-size: 0.875rem;
 }
 
+.row--pop {
+  grid-template-columns: 1fr auto auto;
+}
+
+.row--pop .row__secondary {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.row__pct {
+  grid-column: 3;
+  grid-row: 1;
+  justify-self: end;
+  min-width: 3.5rem;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.list__head {
+  margin: 0;
+  padding: 0.75rem 1rem 0.25rem;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.list__caption {
+  margin: 0;
+  padding: 0 1rem 0.5rem;
+  font-size: 0.75rem;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
 .row__detail {
   grid-column: 1 / -1;
   color: var(--muted);

@@ -37,6 +37,7 @@ export function DataVersionInfo({ info = getDataVersionInfo() }: { info?: Versio
         : regInfo.verified === false
           ? t('menu.data.regSource.unverified')
           : t('menu.data.regSource.manual')
+  const pop = info.popular?.[gen]?.[regulation]
   return (
     <dl className="data-info" aria-label={t('menu.data.title')}>
       <dt>{t('menu.data.ncp')}</dt>
@@ -58,6 +59,16 @@ export function DataVersionInfo({ info = getDataVersionInfo() }: { info?: Versio
         {months.length
           ? months.map((m) => formatUsageMonth(m, lang)).join(', ')
           : t('menu.data.noUsage')}
+      </dd>
+      <dt>{t('menu.data.popular')}</dt>
+      <dd>
+        {pop
+          ? t('menu.data.popularValue', {
+              format: pop.format,
+              month: formatUsageMonth(pop.month, lang),
+              cutoff: pop.cutoff,
+            })
+          : t('menu.data.noPopular')}
       </dd>
       <dt>{t('menu.data.names')}</dt>
       <dd>{formatDataDate(info.namesSnapshotDate, lang)}</dd>
