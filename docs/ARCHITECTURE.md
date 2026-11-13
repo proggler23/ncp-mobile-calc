@@ -123,7 +123,9 @@ Key points:
   format and matchup in one commit, persisted like any change). `AppState.shareNotice` holds the
   Undo snapshot (in memory only) and is shown by `ShareNotice` for 8 s.
 - **Preview:** `index.html` carries Open Graph / Twitter tags. `__SITE_URL__` is replaced at build
-  time from `VITE_SITE_URL` (default `https://proggler23.github.io/ncp-mobile-calc/`). The image
+  time from `VITE_SITE_URL` (default `https://proggler23.github.io/ncp-mobile-calc/`). The deploy
+  workflow sets it from the optional repository variable `SITE_URL` (custom domain or fork), else
+  `https://<owner, lowercased>.github.io/<repo>/`. The image
   `public/og-image-v2.jpg` (1200x630 JPEG, ~85 KB) is a promo image with a real screenshot of the
   app (German UI, Reg. M-C, Sneasler vs Incineroar, engine numbers). `npm run og:image` rebuilds the
   app, screenshots `vite preview` with Playwright and composes the picture

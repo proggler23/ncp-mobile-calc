@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { injectSiteUrl, normalizeSiteUrl } from './site-url'
+import { generateSitemap, injectSiteUrl, normalizeSiteUrl } from './site-url'
 
 const DEF = 'https://example.github.io/app/'
 
@@ -26,6 +26,30 @@ describe('injectSiteUrl', () => {
     )
     expect(out).toBe(
       '<meta content="https://a.dev/$&amp;&quot;&gt;&lt;b&gt;/x"><a href="https://a.dev/$&amp;&quot;&gt;&lt;b&gt;/">',
+    )
+  })
+})
+
+describe('generateSitemap', () => {
+  const loc = (xml: string) => /<loc>(.*)<\/loc>/.exec(xml)?.[1]
+  it('emits a urlset with a single loc and no lastmod', () => {
+    const xml = generateSitemap(DEF)
+    expect(xml.startsWith('<?xml version="1.0" encoding="UTF-8"?>')).toBe(true)
+    expect(xml).toContain('<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">')
+    expect(xml.match(/<url>/g)).toHaveLength(1)
+    expect(xml).not.toContain('lastmod')
+    expect(loc(xml)).toBe(DEF)
+  })
+  it('uses the default and custom normalized URLs', () => {
+    const def = 'https://proggler23.github.io/ncp-mobile-calc/'
+    expect(loc(generateSitemap(normalizeSiteUrl(undefined, def)))).toBe(def)
+    expect(loc(generateSitemap(normalizeSiteUrl('https://example.org/foo', def)))).toBe(
+      'https://example.org/foo/',
+    )
+  })
+  it('escapes XML special characters', () => {
+    expect(loc(generateSitemap('https://a.dev/?a=1&b=<2>/'))).toBe(
+      'https://a.dev/?a=1&amp;b=&lt;2&gt;/',
     )
   })
 })

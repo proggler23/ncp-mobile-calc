@@ -5,7 +5,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 import { readFileSync } from 'node:fs'
 import { normalizeBase } from './scripts/vite-base.ts'
 import { normalizeGoatCounterUrl } from './scripts/goatcounter-url.ts'
-import { injectSiteUrl, normalizeSiteUrl } from './scripts/site-url.ts'
+import { generateSitemap, injectSiteUrl, normalizeSiteUrl } from './scripts/site-url.ts'
 
 /** The generation whose data ships in the precache (the current VGC format). */
 const PRECACHED_GEN = 'champions'
@@ -60,6 +60,9 @@ export default defineConfig(({ mode }) => {
       {
         name: 'site-url',
         transformIndexHtml: (html: string) => injectSiteUrl(html, siteUrl),
+        generateBundle() {
+          this.emitFile({ type: 'asset', fileName: 'sitemap.xml', source: generateSitemap(siteUrl) })
+        },
       },
       VitePWA({
         registerType: 'autoUpdate',
@@ -67,7 +70,8 @@ export default defineConfig(({ mode }) => {
         manifest: {
           name: 'NCP Mobile Calc',
           short_name: 'NCP Calc',
-          description: 'Mobile-first VGC damage calculator',
+          description:
+            'Free mobile-first VGC damage calculator for Pokémon Champions, Scarlet/Violet and all earlier generations. Unofficial fan tool.',
           theme_color: '#1d4ed8',
           background_color: '#ffffff',
           display: 'standalone',
@@ -97,6 +101,7 @@ export default defineConfig(({ mode }) => {
             `assets/genmap-!(${PRECACHED_GEN})-*`,
           ],
           navigateFallback: 'index.html',
+          navigateFallbackDenylist: [/\/sitemap\.xml$/],
           runtimeCaching: [
             {
               urlPattern: /\/assets\/gen(data|map)-[^/]+\.js$/,

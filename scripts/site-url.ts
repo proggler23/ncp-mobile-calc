@@ -32,3 +32,12 @@ export function injectSiteUrl(html: string, siteUrl: string): string {
   const safe = escapeAttr(siteUrl)
   return html.replaceAll('__SITE_URL__', () => safe)
 }
+
+/** sitemap.xml for the single-page app: one `<url>` with the (already normalized) site URL. */
+export function generateSitemap(siteUrl: string): string {
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>${escapeAttr(siteUrl)}</loc></url>
+</urlset>
+`
+}

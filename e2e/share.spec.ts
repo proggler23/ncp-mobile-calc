@@ -156,20 +156,29 @@ test('a broken link shows an error and leaves the app usable', async ({ page }) 
 test('link preview: Open Graph / Twitter tags and a 1200x630 image', async ({ page, request }) => {
   await page.goto('/')
   const meta = (sel: string) => page.locator(`meta[${sel}]`).getAttribute('content')
-  expect(await meta('property="og:title"')).toBe('NCP Mobile Calc – VGC Damage Calculator')
-  expect(await meta('property="og:description"')).toBe(
-    'Mobile VGC Damage Calc · Champions, S/V & alle Gens · offline · Calcs teilen',
-  )
-  expect(await meta('name="twitter:description"')).toBe(
-    'Mobile VGC Damage Calc · Champions, S/V & alle Gens · offline · Calcs teilen',
-  )
+  const title = await page.title()
+  expect(title).toMatch(/^NCP Mobile Calc/)
+  expect(await meta('property="og:title"')).toBe(title)
+  expect(await meta('name="twitter:title"')).toBe(title)
+  const description = await meta('name="description"')
+  expect(description).toBeTruthy()
+  expect(description).toContain('Pokémon Champions')
+  expect(await meta('property="og:description"')).toBe(description)
+  expect(await meta('name="twitter:description"')).toBe(description)
+  const canonical = await page.locator('link[rel="canonical"]').getAttribute('href')
+  expect(canonical).toMatch(/^https:\/\/.+\/$/)
+  expect(await meta('property="og:url"')).toBe(canonical)
+  await expect(page.locator('meta[name="google-site-verification"]')).toHaveCount(1)
   expect(await meta('property="og:type"')).toBe('website')
-  expect(await meta('property="og:url"')).toMatch(/^https:\/\/.+\/$/)
   expect(await meta('property="og:image"')).toMatch(/^https:\/\/.+\/og-image-v2\.jpg$/)
   expect(await meta('name="twitter:image"')).toMatch(/^https:\/\/.+\/og-image-v2\.jpg$/)
   expect(await meta('property="og:image:type"')).toBe('image/jpeg')
   expect(await meta('name="twitter:card"')).toBe('summary_large_image')
   expect(await meta('name="theme-color"')).toBeTruthy()
+
+  const sitemap = await request.get('/sitemap.xml')
+  expect(sitemap.status()).toBe(200)
+  expect(/<loc>(.*?)<\/loc>/.exec(await sitemap.text())?.[1]).toBe(canonical)
 
   const res = await request.get('/og-image-v2.jpg')
   expect(res.ok()).toBe(true)

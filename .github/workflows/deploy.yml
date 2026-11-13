@@ -38,10 +38,27 @@ jobs:
         run: npm run check:generated
       - name: Vendored NCP files match the checksums in UPSTREAM.md
         run: npm run check:vendor
+      - name: Site URL (canonical / Open Graph / sitemap)
+        id: site
+        # Optional repository variable SITE_URL (custom domain or fork). Unset/empty: derived
+        # https://<owner, lowercased>.github.io/<repo>/ (Pages hostnames are lowercase).
+        env:
+          SITE_URL: ${{ vars.SITE_URL }}
+          OWNER: ${{ github.repository_owner }}
+          REPO: ${{ github.event.repository.name }}
+        run: |
+          url="${SITE_URL#"${SITE_URL%%[![:space:]]*}"}"; url="${url%"${url##*[![:space:]]}"}"
+          if [ -z "$url" ]; then
+            owner="$(printf '%s' "$OWNER" | tr '[:upper:]' '[:lower:]')"
+            url="https://${owner}.github.io/${REPO:-${GITHUB_REPOSITORY#*/}}/"
+          fi
+          echo "VITE_SITE_URL=$url"
+          echo "url=$url" >> "$GITHUB_OUTPUT"
       - name: Build (network blocked)
         run: npm run build:offline
         env:
           VITE_BASE: /${{ github.event.repository.name }}/
+          VITE_SITE_URL: ${{ steps.site.outputs.url }}
           # Optional repository variable (Settings > Secrets and variables > Actions > Variables).
           # Unset/empty: the build has no usage statistics at all. Validated by vite.config.ts.
           VITE_GOATCOUNTER_URL: ${{ vars.GOATCOUNTER_URL }}
