@@ -1,6 +1,6 @@
 {
-  "ncpSha": "a2e408ca905dd64d3ee29a1956edfbe74d1c4072",
-  "ncpSyncedAt": "2026-11-12T08:53:57Z",
+  "ncpSha": "0adb1c2e274f3c75a71dcc5bb51dd8a2e759ad9b",
+  "ncpSyncedAt": "2026-11-23T17:36:52Z",
   "showdownVersion": "0.11.11",
   "usageMonths": {
     "adv": [],
@@ -121,5 +121,5 @@
     }
   },
   "namesSnapshotDate": "2026-11-12",
-  "builtAt": "2026-11-12T13:25:45.408Z"
+  "builtAt": "2026-11-23T17:38:59.798Z"
 }

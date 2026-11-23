@@ -2,8 +2,8 @@
 
 - Repository: https://github.com/nerd-of-now/NCP-VGC-Damage-Calculator
 - Branch: main
-- Commit SHA: a2e408ca905dd64d3ee29a1956edfbe74d1c4072 (committer date 2026-10-24)
-- Synced at: 2026-11-12T08:53:57Z
+- Commit SHA: 0adb1c2e274f3c75a71dcc5bb51dd8a2e759ad9b (committer date 2026-11-18)
+- Synced at: 2026-11-23T17:36:52Z
 - License: MIT (see `LICENSE`, copied unmodified from upstream)
 
 Files under `script_res/` are copied byte-for-byte from the upstream clone, except where a patch in
@@ -28,7 +28,7 @@ a7481d2ef311115797da6fa9322a10526ddf41a6dc81e1041dfce0f979f77db3  script_res/dam
 2a475880d911f643e8fd7cb2c3b7c0409ccef1b7168522d4ae5c54419233429c  script_res/damage_rby.js
 209e32d4e728248ff3aa696bfb56a6a4226cce6c84d967d7cede103cd8a9236f  script_res/damage_rse.js
 6634f1695b2eb9caa16505f7fa9bd3fcb632deaeef336b27d80b2752d7da24c5  script_res/damage_xy.js
-7fef551dc97f3c12b7c557820d852c2c55039960a0b35baa4d11083aeee67d78  script_res/item_data.js
+6f18571a3b7c2a693690d5b66dada5a74a7017ab6fa3db56de8b88aeebd35dc5  script_res/item_data.js
 42487c88108fde388e6a97d844ad95fd80e1823e316a1e2d55c300f6456a9a32  script_res/ko_chance.js
 a37c7f624011c07a7d6620b74bca46a3da8faa684c2e7bea6d50235a033209ec  script_res/move_data.js
 90e978355e20254adac006980e20c9ba0a3d9bd7d1a5866dea76a5439e1bea3d  script_res/move_data_za.js
